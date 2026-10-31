@@ -9,7 +9,7 @@
  * - Visualisasi akurat dan presisi sesuai kombinasi entitas wilayah dan waktu.
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import {
   Download,
@@ -17,6 +17,12 @@ import {
   PieChart as PieIcon,
   LineChart as LineIcon,
   BarChart2,
+  BarChart3,
+  Layers,
+  AreaChart,
+  LayoutGrid,
+  ChevronDown,
+  Check,
   GitCompare,
   TrendingUp,
   Calendar,
@@ -30,6 +36,10 @@ import {
   SvgLineChart,
   SvgDonutChart,
   ComparisonGroupedBarChart,
+  SvgStackedBarChart,
+  SvgHistogramChart,
+  SvgAreaChart,
+  SvgTreemapChart,
 } from '../components/charts/InteractiveCharts'
 import { useOrganisasiFilter } from '../hooks/useOrganisasiFilter'
 import { OrganisasiFilterBar } from '../components/OrganisasiFilterBar'
@@ -72,6 +82,59 @@ const METRIC_LABELS = {
   COUNT: 'Jumlah',
 }
 
+// Opsi Tipe Grafik Visualisasi Ala Tableau
+const CHART_TYPES = [
+  {
+    id: 'line',
+    label: 'Garis (Line Chart)',
+    shortLabel: 'Garis',
+    icon: LineIcon,
+    description: 'Tren fluktuasi deret waktu',
+  },
+  {
+    id: 'bar',
+    label: 'Batang (Bar Chart)',
+    shortLabel: 'Batang',
+    icon: BarChart2,
+    description: 'Komparasi nilai per entitas / periode',
+  },
+  {
+    id: 'pie',
+    label: 'Lingkaran (Pie Chart)',
+    shortLabel: 'Lingkaran',
+    icon: PieIcon,
+    description: 'Proporsi & persentase kontribusi',
+  },
+  {
+    id: 'stacked-bar',
+    label: 'Stacked Bar Chart',
+    shortLabel: 'Stacked Bar',
+    icon: Layers,
+    description: 'Akumulasi bertumpuk per entitas',
+  },
+  {
+    id: 'histogram',
+    label: 'Histogram',
+    shortLabel: 'Histogram',
+    icon: BarChart3,
+    description: 'Distribusi frekuensi rentang nilai',
+  },
+  {
+    id: 'area',
+    label: 'Area Chart',
+    shortLabel: 'Area Chart',
+    icon: AreaChart,
+    description: 'Volume akumulasi area berkontur',
+  },
+  {
+    id: 'treemap',
+    label: 'Treemap',
+    shortLabel: 'Treemap',
+    icon: LayoutGrid,
+    description: 'Hierarki proporsi ubin persegi',
+  },
+]
+
 export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilterChange }) => {
   const { user } = useAuth()
   const organisasiFilter = useOrganisasiFilter({ user, liveWilayahData: wilayahData })
@@ -80,7 +143,31 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
   // Sumber Data menggabungkan kategori / jenis transaksi
   const [dataSource, setDataSource] = useState('pemasukan')
   const [metric, setMetric] = useState('SUM') // 'SUM' | 'AVG' | 'COUNT'
-  const [chartType, setChartType] = useState('line') // 'line' | 'bar' | 'pie'
+  const [chartType, setChartType] = useState('line')
+  const [chartDropdownOpen, setChartDropdownOpen] = useState(false)
+  const chartDropdownRef = useRef(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (chartDropdownRef.current && !chartDropdownRef.current.contains(e.target)) {
+        setChartDropdownOpen(false)
+      }
+    }
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setChartDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [])
+
+  const selectedChart = CHART_TYPES.find((t) => t.id === chartType) || CHART_TYPES[0]
+  const SelectedChartIcon = selectedChart.icon
 
   // Tabel Ringkasan Sorting
   const [tableSortField, setTableSortField] = useState('total')
@@ -785,8 +872,8 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-3.5 items-end">
-              {/* 1. Sumber Data & Kategori (Span 4) */}
-              <div className="lg:col-span-4 flex flex-col justify-end">
+              {/* 1. Sumber Data & Kategori (Span 3) */}
+              <div className="lg:col-span-3 flex flex-col justify-end">
                 <label className="block text-xs font-semibold text-muted mb-1 truncate">
                   1. Sumber Data & Kategori
                 </label>
@@ -858,35 +945,86 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
                 </div>
               </div>
 
-              {/* 4. Tipe Grafik (Span 2) */}
-              <div className="lg:col-span-2 flex flex-col justify-end">
+              {/* 4. Tipe Grafik (Span 3) - Dropdown / Select Input Ala Tableau */}
+              <div className="lg:col-span-3 flex flex-col justify-end relative" ref={chartDropdownRef}>
                 <label className="block text-xs font-semibold text-muted mb-1 truncate">
                   4. Tipe Grafik
                 </label>
-                <div className="flex bg-canvas rounded-xl p-1 border border-line h-10 items-center shadow-2xs">
-                  {[
-                    { id: 'line', label: 'Garis', icon: LineIcon },
-                    { id: 'bar', label: 'Batang', icon: BarChart2 },
-                    { id: 'pie', label: 'Lingkaran', icon: PieIcon },
-                  ].map((t) => {
-                    const Icon = t.icon
-                    const isActive = chartType === t.id
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => setChartType(t.id)}
-                        className={`flex-1 h-full flex items-center justify-center gap-1 rounded-lg text-xs font-bold cursor-pointer transition-colors ${isActive
-                            ? 'bg-primary text-white shadow-xs'
-                            : 'text-muted hover:text-ink'
-                          }`}
-                      >
-                        <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-muted'}`} />
-                        <span className="hidden sm:inline">{t.label}</span>
-                      </button>
-                    )
-                  })}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setChartDropdownOpen((prev) => !prev)}
+                  className={`w-full h-10 px-3 rounded-xl border bg-surface text-ink text-xs font-semibold flex items-center justify-between cursor-pointer transition-all shadow-2xs ${
+                    chartDropdownOpen
+                      ? 'border-primary ring-2 ring-primary/20 shadow-xs'
+                      : 'border-line hover:border-line-hover hover:bg-canvas/50'
+                  }`}
+                  aria-expanded={chartDropdownOpen}
+                  aria-haspopup="listbox"
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    <div className="w-5 h-5 rounded-md bg-primary-50 text-primary flex items-center justify-center shrink-0">
+                      <SelectedChartIcon className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="truncate">{selectedChart.label}</span>
+                  </div>
+                  <ChevronDown
+                    className={`w-4 h-4 text-muted shrink-0 transition-transform duration-200 ${
+                      chartDropdownOpen ? 'rotate-180 text-primary' : ''
+                    }`}
+                  />
+                </button>
+
+                {/* Dropdown Menu Ala Tableau */}
+                {chartDropdownOpen && (
+                  <div className="absolute right-0 left-0 top-[calc(100%+6px)] z-50 bg-surface border border-line rounded-2xl shadow-xl p-1.5 min-w-[270px] animate-in fade-in zoom-in-95 duration-150">
+                    <div className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted flex items-center justify-between border-b border-line/60 mb-1">
+                      <span>Tipe Visualisasi (Tableau)</span>
+                      <span className="text-[9px] bg-primary-50 text-primary px-1.5 py-0.2 rounded font-bold">
+                        {CHART_TYPES.length} Tipe
+                      </span>
+                    </div>
+
+                    <div className="space-y-0.5 max-h-[320px] overflow-y-auto">
+                      {CHART_TYPES.map((t) => {
+                        const Icon = t.icon
+                        const isActive = chartType === t.id
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => {
+                              setChartType(t.id)
+                              setChartDropdownOpen(false)
+                            }}
+                            className={`w-full text-left px-2.5 py-2 rounded-xl text-xs flex items-center justify-between gap-2.5 transition-colors cursor-pointer ${
+                              isActive
+                                ? 'bg-primary-50 text-primary font-bold'
+                                : 'text-ink hover:bg-canvas font-medium'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 truncate">
+                              <div
+                                className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                                  isActive ? 'bg-primary text-white shadow-2xs' : 'bg-canvas border border-line text-muted'
+                                }`}
+                              >
+                                <Icon className="w-3.5 h-3.5" />
+                              </div>
+                              <div className="truncate">
+                                <div className={`text-xs ${isActive ? 'font-bold text-primary' : 'font-semibold text-ink'} truncate`}>
+                                  {t.label}
+                                </div>
+                                <div className="text-[10px] text-muted truncate">{t.description}</div>
+                              </div>
+                            </div>
+
+                            {isActive && <Check className="w-4 h-4 text-primary shrink-0" />}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -970,7 +1108,7 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
                     }
                   />
                 )
-              ) : (
+              ) : chartType === 'pie' ? (
                 <SvgDonutChart
                   data={isMultiEntity ? donutData : chartData}
                   height={220}
@@ -980,7 +1118,55 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
                       : formatCompactRupiah(v)
                   }
                 />
-              )}
+              ) : chartType === 'stacked-bar' ? (
+                <SvgStackedBarChart
+                  data={chartData}
+                  series={series}
+                  height={240}
+                  valueFormatter={(v) =>
+                    dataSource.startsWith('kehadiran') || metric === 'COUNT'
+                      ? new Intl.NumberFormat('id-ID').format(v)
+                      : formatCompactRupiah(v)
+                  }
+                />
+              ) : chartType === 'histogram' ? (
+                <SvgHistogramChart
+                  data={chartData}
+                  series={series}
+                  height={240}
+                  valueFormatter={(v) =>
+                    dataSource.startsWith('kehadiran') || metric === 'COUNT'
+                      ? new Intl.NumberFormat('id-ID').format(v)
+                      : formatCompactRupiah(v)
+                  }
+                  isCurrency={!(dataSource.startsWith('kehadiran') || metric === 'COUNT')}
+                />
+              ) : chartType === 'area' ? (
+                <SvgAreaChart
+                  data={chartData}
+                  series={series}
+                  height={240}
+                  valueFormatter={(v) =>
+                    dataSource.startsWith('kehadiran') || metric === 'COUNT'
+                      ? new Intl.NumberFormat('id-ID').format(v)
+                      : formatCompactRupiah(v)
+                  }
+                />
+              ) : chartType === 'treemap' ? (
+                <SvgTreemapChart
+                  data={chartData}
+                  series={series}
+                  entityStats={entityStats}
+                  comparedEntities={comparedEntities}
+                  isMultiEntity={isMultiEntity}
+                  height={240}
+                  valueFormatter={(v) =>
+                    dataSource.startsWith('kehadiran') || metric === 'COUNT'
+                      ? new Intl.NumberFormat('id-ID').format(v)
+                      : formatCompactRupiah(v)
+                  }
+                />
+              ) : null}
             </div>
           </div>
 

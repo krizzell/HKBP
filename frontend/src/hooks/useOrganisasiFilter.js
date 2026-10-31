@@ -312,6 +312,21 @@ export function useOrganisasiFilter({ user = null, liveWilayahData = null, initi
     }
   }, [isHuriaAdmin, locks.distrik, options, user, clearWarnings])
 
+  // Menambahkan opsi baru secara dinamis (misal di-fetch saat hover)
+  const addOptions = useCallback((lvl, newItems) => {
+    if (!Array.isArray(newItems) || newItems.length === 0) return
+    setOptions((prev) => {
+      const existing = prev[lvl] || []
+      const existingIds = new Set(existing.map((x) => String(x.id)))
+      const toAdd = newItems.filter((x) => !existingIds.has(String(x.id)))
+      if (toAdd.length === 0) return prev
+      return {
+        ...prev,
+        [lvl]: [...existing, ...toAdd],
+      }
+    })
+  }, [])
+
   const setPeriode = useCallback((patch) => {
     setPeriodeState((prev) => ({ ...prev, ...patch }))
   }, [])
@@ -332,6 +347,7 @@ export function useOrganisasiFilter({ user = null, liveWilayahData = null, initi
     toggleGroup,
     pickTop,
     reset,
+    addOptions,
     query: debouncedQuery,
     abortSignal: abortControllerRef.current?.signal,
   }

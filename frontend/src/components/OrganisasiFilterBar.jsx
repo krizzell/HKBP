@@ -2,14 +2,15 @@
  * @file OrganisasiFilterBar.jsx
  * Filter wilayah berjenjang 3 level (Distrik -> Resort -> Huria) dalam 1 Section Tunggal:
  * - 1 section utuh tanpa kotak terpisah-pisah untuk tiap distrik.
- * - Tanpa sub-header redundan (tanpa tulisan "Resort di ...", "Huria di ...", dan tanpa teks "Centang resort ini...").
- * - Orang langsung mengenali dari nama entitas ("Resort Tebet", "HKBP Sudirman").
- * - Saat Distrik diklik/dimekarkan, daftar Resort langsung muncul di bawahnya dengan indentasi bersih.
- * - Saat Resort diklik/dimekarkan, daftar Huria langsung muncul di bawahnya dengan indentasi bersih.
- * - Mendukung multi-pilih (maksimal 6 item) dengan penanda target komparasi otomatis.
+ * - Berbasis hover interaktif:
+ *   * Mengarahkan kursor (hover) ke baris Distrik otomatis membuka (expand) daftar Resort dan mem-fetch datanya secara otomatis.
+ *   * Menggeser kursor ke salah satu Resort otomatis membuka (expand) daftar Huria di bawahnya dan mem-fetch datanya secara otomatis.
+ * - Dilengkapi feedback visual loading (spinner & teks indikator) saat data sedang di-fetch.
+ * - Tetap mendukung klik manual (chevron) & tombol Buka Semua / Tutup Semua.
+ * - Multi-pilih (maksimal 6 item) dengan penanda target komparasi otomatis.
  */
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import {
   RotateCcw,
   Search,
@@ -21,8 +22,15 @@ import {
   ChevronDown,
   Lock,
   AlertCircle,
+  Loader2,
 } from 'lucide-react'
 import { FilterSummary } from './FilterSummary'
+import { getOrganisasiOptions } from '../api/organisasiApi'
+import { getResortList, getHuriaList } from '../api/masterWilayahApi'
+
+// Jeda debounce hover (80ms) agar gerakan kursor cepat tidak memicu layout shift mendadak,
+// namun langsung responsif saat kursor diarahkan ke baris target.
+const HOVER_EXPAND_DELAY_MS = 80
 
 // Checkbox kustom ramah brand token HKBP
 function CustomCheckbox({ checked, onChange, disabled, id }) {
@@ -63,15 +71,195 @@ export function OrganisasiFilterBar({ filterState }) {
     setPeriode,
     setSelected,
     reset,
+    addOptions,
   } = filterState
 
   const maxSelected = 6
 
-  // Local state untuk status terbuka/tutup tiap entitas
+  // Local state status buka/tutup (expand) tiap entitas
   const [expandedDistriks, setExpandedDistriks] = useState(new Set())
   const [expandedResorts, setExpandedResorts] = useState(new Set())
   const [searchQuery, setSearchQuery] = useState('')
   const [limitWarning, setLimitWarning] = useState('')
+
+  // State untuk data anak yang di-fetch secara dinamis pas di-hover
+  const [fetchedResorts, setFetchedResorts] = useState({}) // { [distrikId]: Resort[] }
+  const [fetchedHurias, setFetchedHurias] = useState({})   // { [resortId]: Huria[] }
+  const [loadingResorts, setLoadingResorts] = useState({}) // { [distrikId]: boolean }
+  const [loadingHurias, setLoadingHurias] = useState({})   // { [resortId]: boolean }
+
+  // Refs untuk tracking hover timer & request in-flight
+  const hoverTimerRef = useRef(null)
+  const fetchingRef = useRef(new Set())
+  const fetchedIdsRef = useRef(new Set())
+
+  // Cleanup timer saat unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
+    }
+  }, [])
+
+  // Fungsi fetch anak (Resort atau Huria) secara otomatis saat di-hover
+  const fetchChildData = useCallback(
+    async (type, id) => {
+      const sId = String(id)
+      const fetchKey = `${type}-${sId}`
+
+      // Cegah duplikasi panggilan yang sedang berlangsung atau yang sudah pernah di-fetch
+      if (fetchingRef.current.has(fetchKey)) return
+      if (fetchedIdsRef.current.has(fetchKey)) return
+
+      fetchingRef.current.add(fetchKey)
+
+      if (type === 'distrik') {
+        setLoadingResorts((prev) => ({ ...prev, [sId]: true }))
+        try {
+          let results = []
+
+          // 1. Coba ambil dari Master Wilayah Resort API
+          try {
+            const res = await getResortList({ idDistrik: sId, limit: 100 })
+            const raw = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []
+            if (raw.length > 0) {
+              results = raw.map((item) => ({
+                id: String(item._id || item.id || item.IdResort),
+                nama: item.Nama || item.NamaResort || item.nama,
+                idInduk: sId,
+              }))
+            }
+          } catch {
+            // Fallback ke getOrganisasiOptions
+          }
+
+          // 2. Fallback opsi organisasi
+          if (results.length === 0) {
+            try {
+              const res = await getOrganisasiOptions({ level: 'resort', idDistrik: [sId] })
+              const raw = res?.data || []
+              if (Array.isArray(raw) && raw.length > 0) {
+                results = raw.map((item) => ({
+                  id: String(item.id || item._id || item.IdResort),
+                  nama: item.nama || item.Nama || item.NamaResort,
+                  idInduk: sId,
+                }))
+              }
+            } catch {
+              // Abaikan
+            }
+          }
+
+          if (results.length > 0) {
+            setFetchedResorts((prev) => ({ ...prev, [sId]: results }))
+            if (typeof addOptions === 'function') {
+              addOptions('resort', results)
+            }
+          }
+          fetchedIdsRef.current.add(fetchKey)
+        } finally {
+          fetchingRef.current.delete(fetchKey)
+          setLoadingResorts((prev) => ({ ...prev, [sId]: false }))
+        }
+      } else if (type === 'resort') {
+        setLoadingHurias((prev) => ({ ...prev, [sId]: true }))
+        try {
+          let results = []
+
+          // 1. Coba ambil dari Master Wilayah Huria API
+          try {
+            const res = await getHuriaList({ idResort: sId, limit: 100 })
+            const raw = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []
+            if (raw.length > 0) {
+              results = raw.map((item) => ({
+                id: String(item._id || item.id || item.IdHuria),
+                nama: item.Nama || item.NamaHuria || item.nama,
+                idInduk: sId,
+              }))
+            }
+          } catch {
+            // Fallback ke getOrganisasiOptions
+          }
+
+          // 2. Fallback opsi organisasi
+          if (results.length === 0) {
+            try {
+              const res = await getOrganisasiOptions({ level: 'huria', idResort: [sId] })
+              const raw = res?.data || []
+              if (Array.isArray(raw) && raw.length > 0) {
+                results = raw.map((item) => ({
+                  id: String(item.id || item._id || item.IdHuria),
+                  nama: item.nama || item.Nama || item.NamaHuria,
+                  idInduk: sId,
+                }))
+              }
+            } catch {
+              // Abaikan
+            }
+          }
+
+          if (results.length > 0) {
+            setFetchedHurias((prev) => ({ ...prev, [sId]: results }))
+            if (typeof addOptions === 'function') {
+              addOptions('huria', results)
+            }
+          }
+          fetchedIdsRef.current.add(fetchKey)
+        } finally {
+          fetchingRef.current.delete(fetchKey)
+          setLoadingHurias((prev) => ({ ...prev, [sId]: false }))
+        }
+      }
+    },
+    [addOptions]
+  )
+
+  // Handler hover untuk baris Distrik:
+  // Otomatis expand daftar Resort dan mem-fetch datanya
+  const handleDistrikMouseEnter = useCallback(
+    (distrik) => {
+      const dId = String(distrik.id)
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
+
+      hoverTimerRef.current = setTimeout(() => {
+        setExpandedDistriks((prev) => {
+          if (prev.has(dId)) return prev
+          const next = new Set(prev)
+          next.add(dId)
+          return next
+        })
+        fetchChildData('distrik', dId)
+      }, HOVER_EXPAND_DELAY_MS)
+    },
+    [fetchChildData]
+  )
+
+  // Handler hover untuk baris Resort:
+  // Otomatis expand daftar Huria dan mem-fetch datanya
+  const handleResortMouseEnter = useCallback(
+    (resort) => {
+      const rId = String(resort.id)
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
+
+      hoverTimerRef.current = setTimeout(() => {
+        setExpandedResorts((prev) => {
+          if (prev.has(rId)) return prev
+          const next = new Set(prev)
+          next.add(rId)
+          return next
+        })
+        fetchChildData('resort', rId)
+      }, HOVER_EXPAND_DELAY_MS)
+    },
+    [fetchChildData]
+  )
+
+  // Batal timer jika kursor hanya melintas sangat cepat
+  const handleMouseLeave = useCallback(() => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current)
+      hoverTimerRef.current = null
+    }
+  }, [])
 
   // Auto-expand saat Distrik terpilih
   useEffect(() => {
@@ -81,8 +269,10 @@ export function OrganisasiFilterBar({ filterState }) {
         selected.distrik.forEach((id) => next.add(String(id)))
         return next
       })
+      // Fetch data resort untuk distrik yang dipilih
+      selected.distrik.forEach((id) => fetchChildData('distrik', id))
     }
-  }, [selected.distrik])
+  }, [selected.distrik, fetchChildData])
 
   // Auto-expand saat Resort terpilih
   useEffect(() => {
@@ -92,10 +282,12 @@ export function OrganisasiFilterBar({ filterState }) {
         selected.resort.forEach((id) => next.add(String(id)))
         return next
       })
+      // Fetch data huria untuk resort yang dipilih
+      selected.resort.forEach((id) => fetchChildData('resort', id))
     }
-  }, [selected.resort])
+  }, [selected.resort, fetchChildData])
 
-  // Toggle buka/tutup Distrik
+  // Toggle manual klik Distrik
   const toggleDistrikExpand = (dId, e) => {
     if (e) e.stopPropagation()
     const sId = String(dId)
@@ -105,12 +297,13 @@ export function OrganisasiFilterBar({ filterState }) {
         next.delete(sId)
       } else {
         next.add(sId)
+        fetchChildData('distrik', sId)
       }
       return next
     })
   }
 
-  // Toggle buka/tutup Resort
+  // Toggle manual klik Resort
   const toggleResortExpand = (rId, e) => {
     if (e) e.stopPropagation()
     const sId = String(rId)
@@ -120,6 +313,7 @@ export function OrganisasiFilterBar({ filterState }) {
         next.delete(sId)
       } else {
         next.add(sId)
+        fetchChildData('resort', sId)
       }
       return next
     })
@@ -127,16 +321,124 @@ export function OrganisasiFilterBar({ filterState }) {
 
   // Buka semua / Tutup semua
   const handleExpandAll = () => {
-    const allD = new Set((options.distrik || []).map((d) => String(d.id)))
-    const allR = new Set((options.resort || []).map((r) => String(r.id)))
-    setExpandedDistriks(allD)
-    setExpandedResorts(allR)
+    const allD = options.distrik || []
+    const allDIds = new Set(allD.map((d) => String(d.id)))
+    setExpandedDistriks(allDIds)
+    allD.forEach((d) => fetchChildData('distrik', d.id))
+
+    const allR = options.resort || []
+    const allRIds = new Set(allR.map((r) => String(r.id)))
+    setExpandedResorts(allRIds)
+    allR.forEach((r) => fetchChildData('resort', r.id))
   }
 
   const handleCollapseAll = () => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
     setExpandedDistriks(new Set())
     setExpandedResorts(new Set())
   }
+
+  // Gabungkan options dengan data yang di-fetch secara dinamis
+  const q = searchQuery.trim().toLowerCase()
+
+  const { distrikList, resortsByDistrik, huriasByResort, allResorts, allHurias } = useMemo(() => {
+    const allD = options.distrik || []
+
+    // 1. Gabungkan opsi resort
+    const combinedResorts = [...(options.resort || [])]
+    const seenResortIds = new Set(combinedResorts.map((r) => String(r.id)))
+    Object.values(fetchedResorts).forEach((arr) => {
+      if (Array.isArray(arr)) {
+        arr.forEach((r) => {
+          const sId = String(r.id)
+          if (!seenResortIds.has(sId)) {
+            seenResortIds.add(sId)
+            combinedResorts.push(r)
+          }
+        })
+      }
+    })
+
+    // 2. Gabungkan opsi huria
+    const combinedHurias = [...(options.huria || [])]
+    const seenHuriaIds = new Set(combinedHurias.map((h) => String(h.id)))
+    Object.values(fetchedHurias).forEach((arr) => {
+      if (Array.isArray(arr)) {
+        arr.forEach((h) => {
+          const sId = String(h.id)
+          if (!seenHuriaIds.has(sId)) {
+            seenHuriaIds.add(sId)
+            combinedHurias.push(h)
+          }
+        })
+      }
+    })
+
+    // Kelompokkan resort berdasarkan idInduk (Distrik)
+    const rMap = new Map()
+    combinedResorts.forEach((r) => {
+      const parentId = String(r.idInduk || '')
+      if (!rMap.has(parentId)) rMap.set(parentId, [])
+      rMap.get(parentId).push(r)
+    })
+
+    // Kelompokkan huria berdasarkan idInduk (Resort)
+    const hMap = new Map()
+    combinedHurias.forEach((h) => {
+      const parentId = String(h.idInduk || '')
+      if (!hMap.has(parentId)) hMap.set(parentId, [])
+      hMap.get(parentId).push(h)
+    })
+
+    // Jika tidak ada pencarian, kembalikan semua
+    if (!q) {
+      return {
+        distrikList: allD,
+        resortsByDistrik: rMap,
+        huriasByResort: hMap,
+        allResorts: combinedResorts,
+        allHurias: combinedHurias,
+      }
+    }
+
+    // Filter berjenjang jika ada query
+    const matchedD = []
+    allD.forEach((d) => {
+      const dMatches = d.nama?.toLowerCase().includes(q)
+      const dResorts = rMap.get(String(d.id)) || []
+
+      let hasMatchingChild = false
+      dResorts.forEach((r) => {
+        if (r.nama?.toLowerCase().includes(q)) hasMatchingChild = true
+        const rHurias = hMap.get(String(r.id)) || []
+        if (rHurias.some((h) => h.nama?.toLowerCase().includes(q))) {
+          hasMatchingChild = true
+        }
+      })
+
+      if (dMatches || hasMatchingChild) {
+        matchedD.push(d)
+      }
+    })
+
+    return {
+      distrikList: matchedD,
+      resortsByDistrik: rMap,
+      huriasByResort: hMap,
+      allResorts: combinedResorts,
+      allHurias: combinedHurias,
+    }
+  }, [options.distrik, options.resort, options.huria, fetchedResorts, fetchedHurias, q])
+
+  // Auto-expand hasil pencarian
+  useEffect(() => {
+    if (q) {
+      const matchedDistrikIds = new Set(distrikList.map((d) => String(d.id)))
+      const matchedResortIds = new Set(allResorts.map((r) => String(r.id)))
+      setExpandedDistriks(matchedDistrikIds)
+      setExpandedResorts(matchedResortIds)
+    }
+  }, [q, distrikList, allResorts])
 
   // Toggle seleksi checkbox per level
   const handleToggle = (lvl, id) => {
@@ -161,13 +463,13 @@ export function OrganisasiFilterBar({ filterState }) {
 
       // Pastikan induk juga terdaftar jika turunan dipilih agar tidak kena prune
       if (lvl === 'huria') {
-        const huriaItem = (options.huria || []).find((h) => String(h.id) === sId)
+        const huriaItem = (allHurias || []).find((h) => String(h.id) === sId)
         if (huriaItem && huriaItem.idInduk) {
           const resortId = String(huriaItem.idInduk)
           if (!selected.resort.includes(resortId)) {
             setSelected('resort', [...(selected.resort || []), resortId])
           }
-          const resortItem = (options.resort || []).find((r) => String(r.id) === resortId)
+          const resortItem = (allResorts || []).find((r) => String(r.id) === resortId)
           if (resortItem && resortItem.idInduk) {
             const distrikId = String(resortItem.idInduk)
             if (!selected.distrik.includes(distrikId)) {
@@ -176,7 +478,7 @@ export function OrganisasiFilterBar({ filterState }) {
           }
         }
       } else if (lvl === 'resort') {
-        const resortItem = (options.resort || []).find((r) => String(r.id) === sId)
+        const resortItem = (allResorts || []).find((r) => String(r.id) === sId)
         if (resortItem && resortItem.idInduk) {
           const distrikId = String(resortItem.idInduk)
           if (!selected.distrik.includes(distrikId)) {
@@ -191,8 +493,10 @@ export function OrganisasiFilterBar({ filterState }) {
       // Auto-buka anaknya jika dicentang
       if (lvl === 'distrik') {
         setExpandedDistriks((prev) => new Set([...prev, sId]))
+        fetchChildData('distrik', sId)
       } else if (lvl === 'resort') {
         setExpandedResorts((prev) => new Set([...prev, sId]))
+        fetchChildData('resort', sId)
       }
     }
   }
@@ -202,77 +506,6 @@ export function OrganisasiFilterBar({ filterState }) {
     const current = selected[lvl] || []
     setSelected(lvl, current.filter((item) => String(item) !== String(id)))
   }
-
-  // Filter pencarian cerdas yang memeriksa Distrik, Resort, dan Huria
-  const q = searchQuery.trim().toLowerCase()
-
-  const { distrikList, resortsByDistrik, huriasByResort } = useMemo(() => {
-    const allD = options.distrik || []
-    const allR = options.resort || []
-    const allH = options.huria || []
-
-    // Kelompokkan resort berdasarkan idInduk (Distrik)
-    const rMap = new Map()
-    allR.forEach((r) => {
-      const parentId = String(r.idInduk || '')
-      if (!rMap.has(parentId)) rMap.set(parentId, [])
-      rMap.get(parentId).push(r)
-    })
-
-    // Kelompokkan huria berdasarkan idInduk (Resort)
-    const hMap = new Map()
-    allH.forEach((h) => {
-      const parentId = String(h.idInduk || '')
-      if (!hMap.has(parentId)) hMap.set(parentId, [])
-      hMap.get(parentId).push(h)
-    })
-
-    // Jika tidak ada pencarian, kembalikan semua
-    if (!q) {
-      return {
-        distrikList: allD,
-        resortsByDistrik: rMap,
-        huriasByResort: hMap,
-      }
-    }
-
-    // Filter berjenjang jika ada query
-    const matchedD = []
-    allD.forEach((d) => {
-      const dMatches = d.nama?.toLowerCase().includes(q)
-      const dResorts = rMap.get(String(d.id)) || []
-
-      // Periksa apakah ada resort atau huria di bawah distrik ini yang cocok
-      let hasMatchingChild = false
-      dResorts.forEach((r) => {
-        if (r.nama?.toLowerCase().includes(q)) hasMatchingChild = true
-        const rHurias = hMap.get(String(r.id)) || []
-        if (rHurias.some((h) => h.nama?.toLowerCase().includes(q))) {
-          hasMatchingChild = true
-        }
-      })
-
-      if (dMatches || hasMatchingChild) {
-        matchedD.push(d)
-      }
-    })
-
-    return {
-      distrikList: matchedD,
-      resortsByDistrik: rMap,
-      huriasByResort: hMap,
-    }
-  }, [options.distrik, options.resort, options.huria, q])
-
-  // Auto-expand hasil pencarian
-  useEffect(() => {
-    if (q) {
-      const matchedDistrikIds = new Set(distrikList.map((d) => String(d.id)))
-      const matchedResortIds = new Set((options.resort || []).map((r) => String(r.id)))
-      setExpandedDistriks(matchedDistrikIds)
-      setExpandedResorts(matchedResortIds)
-    }
-  }, [q, distrikList, options.resort])
 
   return (
     <div className="bg-surface rounded-2xl border border-line p-5 sm:p-6 shadow-xs w-full transition-all font-sans flex flex-col gap-4">
@@ -290,7 +523,7 @@ export function OrganisasiFilterBar({ filterState }) {
             )}
           </div>
           <p className="text-xs text-muted mt-0.5 mb-0">
-            Pilih entitas wilayah yang ingin dibandingkan (Distrik → Resort → Huria).
+            Arahkan kursor ke baris wilayah untuk memekarkan hirarki (Distrik → Resort → Huria) dan memuat datanya secara otomatis.
           </p>
         </div>
 
@@ -323,7 +556,7 @@ export function OrganisasiFilterBar({ filterState }) {
         </div>
       )}
 
-      {/* 2. Container Tunggal: 1 Section Utuh Tanpa Terpisah-pisah */}
+      {/* 2. Container Tunggal: 1 Section Utuh Continuous Tree List */}
       <div className="border border-line rounded-2xl bg-surface shadow-2xs overflow-hidden flex flex-col w-full">
         {/* Toolbar Pencarian & Kontrol Buka/Tutup */}
         <div className="p-3 sm:p-4 bg-canvas/30 border-b border-line flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
@@ -386,7 +619,7 @@ export function OrganisasiFilterBar({ filterState }) {
           </div>
         </div>
 
-        {/* Viewport 1 Section Tunggal: Continuous Tree List */}
+        {/* Viewport 1 Section Tunggal: Continuous Tree List dengan Hover Expand */}
         <div className="max-h-[520px] overflow-y-auto flex flex-col divide-y divide-line/60">
           {distrikList.length === 0 ? (
             <div className="p-8 text-center text-xs text-muted">
@@ -399,21 +632,21 @@ export function OrganisasiFilterBar({ filterState }) {
               const isDistrikExpanded = expandedDistriks.has(dId)
               const resortsForDistrik = resortsByDistrik.get(dId) || []
               const hasResorts = resortsForDistrik.length > 0
+              const isResortsLoading = Boolean(loadingResorts[dId])
 
               return (
                 <div key={dId} className="flex flex-col">
                   {/* ====================================================
-                      BARIS DISTRIK (1 Section Bersambung)
+                      BARIS DISTRIK (Hover to Expand & Auto-fetch)
                       ==================================================== */}
                   <div
-                    onClick={() => {
-                      // Klik baris Distrik: centang dan buka daftar Resort
-                      handleToggle('distrik', d.id)
-                    }}
+                    onClick={() => handleToggle('distrik', d.id)}
+                    onMouseEnter={() => handleDistrikMouseEnter(d)}
+                    onMouseLeave={handleMouseLeave}
                     className={`group flex items-center justify-between px-4 py-3 cursor-pointer transition-colors ${
                       isDistrikChecked
                         ? 'bg-primary-50/70 text-primary font-bold'
-                        : 'bg-surface hover:bg-canvas/50 text-ink'
+                        : 'bg-surface hover:bg-primary-50/30 text-ink'
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -448,12 +681,18 @@ export function OrganisasiFilterBar({ filterState }) {
 
                     {/* Info Kanan Distrik */}
                     <div className="flex items-center gap-2.5 shrink-0">
+                      {isResortsLoading && (
+                        <div className="flex items-center gap-1.5 text-[11px] text-primary">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span className="hidden sm:inline">Memuat resort...</span>
+                        </div>
+                      )}
                       {isDistrikChecked && (
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary text-white shadow-2xs">
                           Dipilih
                         </span>
                       )}
-                      {hasResorts && (
+                      {!isResortsLoading && hasResorts && (
                         <span className="text-[11px] text-muted">
                           {resortsForDistrik.length} resort
                         </span>
@@ -463,129 +702,157 @@ export function OrganisasiFilterBar({ filterState }) {
                   </div>
 
                   {/* ====================================================
-                      DAFTAR RESORT (Langsung di bawah Distrik, tanpa subheader redundan)
+                      DAFTAR RESORT (Langsung di bawah Distrik)
                       ==================================================== */}
                   {isDistrikExpanded && (
                     <div className="bg-canvas/25 border-t border-line/40 flex flex-col divide-y divide-line/30 transition-all">
-                      {resortsForDistrik.map((r) => {
-                        const rId = String(r.id)
-                        const isResortChecked = selected.resort.includes(rId)
-                        const isResortExpanded = expandedResorts.has(rId)
-                        const huriasForResort = huriasByResort.get(rId) || []
-                        const hasHurias = huriasForResort.length > 0
+                      {isResortsLoading && resortsForDistrik.length === 0 ? (
+                        <div className="flex items-center gap-2 px-5 py-3 text-xs text-muted">
+                          <Loader2 className="w-3.5 h-3.5 text-primary animate-spin shrink-0" />
+                          <span>Mengambil daftar resort...</span>
+                        </div>
+                      ) : resortsForDistrik.length === 0 ? (
+                        <div className="px-5 py-3 text-xs text-muted italic">
+                          Tidak ada data resort pada distrik ini.
+                        </div>
+                      ) : (
+                        resortsForDistrik.map((r) => {
+                          const rId = String(r.id)
+                          const isResortChecked = selected.resort.includes(rId)
+                          const isResortExpanded = expandedResorts.has(rId)
+                          const huriasForResort = huriasByResort.get(rId) || []
+                          const hasHurias = huriasForResort.length > 0
+                          const isHuriasLoading = Boolean(loadingHurias[rId])
 
-                        return (
-                          <div key={rId} className="flex flex-col">
-                            {/* Baris Resort */}
-                            <div
-                              onClick={() => {
-                                // Klik baris Resort: centang dan buka daftar Huria
-                                handleToggle('resort', r.id)
-                              }}
-                              className={`group flex items-center justify-between px-4 pl-11 py-2.5 cursor-pointer transition-colors ${
-                                isResortChecked
-                                  ? 'bg-indigo-50/60 text-indigo-950 font-semibold'
-                                  : 'hover:bg-canvas/50 text-ink'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                {/* Chevron Buka/Tutup Huria */}
-                                <button
-                                  type="button"
-                                  onClick={(e) => toggleResortExpand(r.id, e)}
-                                  title={isResortExpanded ? 'Tutup daftar huria' : 'Buka daftar huria'}
-                                  className="p-1 -ml-1 rounded-md text-muted hover:text-ink hover:bg-canvas cursor-pointer transition-transform"
-                                >
-                                  {isResortExpanded ? (
-                                    <ChevronDown className="w-3.5 h-3.5 text-indigo-600" />
-                                  ) : (
-                                    <ChevronRight className="w-3.5 h-3.5" />
+                          return (
+                            <div key={rId} className="flex flex-col">
+                              {/* Baris Resort */}
+                              <div
+                                onClick={() => handleToggle('resort', r.id)}
+                                onMouseEnter={() => handleResortMouseEnter(r)}
+                                onMouseLeave={handleMouseLeave}
+                                className={`group flex items-center justify-between px-4 pl-11 py-2.5 cursor-pointer transition-colors ${
+                                  isResortChecked
+                                    ? 'bg-indigo-50/60 text-indigo-950 font-semibold'
+                                    : 'hover:bg-indigo-50/30 text-ink'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  {/* Chevron Buka/Tutup Huria */}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => toggleResortExpand(r.id, e)}
+                                    title={isResortExpanded ? 'Tutup daftar huria' : 'Buka daftar huria'}
+                                    className="p-1 -ml-1 rounded-md text-muted hover:text-ink hover:bg-canvas cursor-pointer transition-transform"
+                                  >
+                                    {isResortExpanded ? (
+                                      <ChevronDown className="w-3.5 h-3.5 text-indigo-600" />
+                                    ) : (
+                                      <ChevronRight className="w-3.5 h-3.5" />
+                                    )}
+                                  </button>
+
+                                  {/* Checkbox Resort */}
+                                  <CustomCheckbox
+                                    checked={isResortChecked}
+                                    disabled={locks.resort}
+                                    id={`cb-resort-${r.id}`}
+                                    onChange={() => handleToggle('resort', r.id)}
+                                  />
+
+                                  {/* Ikon & Nama Resort */}
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <Layers className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                                    <span className="text-xs truncate">{r.nama}</span>
+                                  </div>
+                                </div>
+
+                                {/* Info Kanan Resort */}
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {isHuriasLoading && (
+                                    <div className="flex items-center gap-1 text-[10px] text-indigo-600">
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                      <span className="hidden sm:inline">Memuat huria...</span>
+                                    </div>
                                   )}
-                                </button>
-
-                                {/* Checkbox Resort */}
-                                <CustomCheckbox
-                                  checked={isResortChecked}
-                                  disabled={locks.resort}
-                                  id={`cb-resort-${r.id}`}
-                                  onChange={() => handleToggle('resort', r.id)}
-                                />
-
-                                {/* Ikon & Nama Resort */}
-                                <div className="flex items-center gap-1.5 min-w-0">
-                                  <Layers className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                                  <span className="text-xs truncate">{r.nama}</span>
+                                  {isResortChecked && (
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-600 text-white shadow-2xs">
+                                      Dipilih
+                                    </span>
+                                  )}
+                                  {!isHuriasLoading && hasHurias && (
+                                    <span className="text-[10px] text-muted">
+                                      {huriasForResort.length} huria
+                                    </span>
+                                  )}
+                                  {locks.resort && <Lock className="w-3.5 h-3.5 text-muted" />}
                                 </div>
                               </div>
 
-                              {/* Info Kanan Resort */}
-                              <div className="flex items-center gap-2 shrink-0">
-                                {isResortChecked && (
-                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-600 text-white shadow-2xs">
-                                    Dipilih
-                                  </span>
-                                )}
-                                {hasHurias && (
-                                  <span className="text-[10px] text-muted">
-                                    {huriasForResort.length} huria
-                                  </span>
-                                )}
-                                {locks.resort && <Lock className="w-3.5 h-3.5 text-muted" />}
-                              </div>
-                            </div>
-
-                            {/* ====================================================
-                                DAFTAR HURIA (Langsung di bawah Resort, tanpa subheader redundan)
-                                ==================================================== */}
-                            {isResortExpanded && (
-                              <div className="bg-canvas/50 border-t border-line/30 flex flex-col divide-y divide-line/20 transition-all">
-                                {huriasForResort.map((h) => {
-                                  const hId = String(h.id)
-                                  const isHuriaChecked = selected.huria.includes(hId)
-
-                                  return (
-                                    <div
-                                      key={hId}
-                                      onClick={() => handleToggle('huria', h.id)}
-                                      className={`group flex items-center justify-between px-4 pl-18 py-2 cursor-pointer transition-colors ${
-                                        isHuriaChecked
-                                          ? 'bg-emerald-50/70 text-emerald-950 font-semibold'
-                                          : 'hover:bg-canvas/70 text-ink'
-                                      }`}
-                                    >
-                                      <div className="flex items-center gap-2.5 min-w-0">
-                                        {/* Checkbox Huria */}
-                                        <CustomCheckbox
-                                          checked={isHuriaChecked}
-                                          disabled={locks.huria}
-                                          id={`cb-huria-${h.id}`}
-                                          onChange={() => handleToggle('huria', h.id)}
-                                        />
-
-                                        {/* Ikon & Nama Huria */}
-                                        <div className="flex items-center gap-1.5 min-w-0">
-                                          <Church className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-                                          <span className="text-xs truncate">{h.nama}</span>
-                                        </div>
-                                      </div>
-
-                                      {/* Status Terpilih Huria */}
-                                      <div className="flex items-center gap-1.5 shrink-0">
-                                        {isHuriaChecked && (
-                                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-700 text-white shadow-2xs">
-                                            Dipilih
-                                          </span>
-                                        )}
-                                        {locks.huria && <Lock className="w-3 h-3 text-muted" />}
-                                      </div>
+                              {/* ====================================================
+                                  DAFTAR HURIA (Langsung di bawah Resort)
+                                  ==================================================== */}
+                              {isResortExpanded && (
+                                <div className="bg-canvas/50 border-t border-line/30 flex flex-col divide-y divide-line/20 transition-all">
+                                  {isHuriasLoading && huriasForResort.length === 0 ? (
+                                    <div className="flex items-center gap-2 px-5 pl-18 py-2.5 text-xs text-muted">
+                                      <Loader2 className="w-3.5 h-3.5 text-indigo-600 animate-spin shrink-0" />
+                                      <span>Mengambil daftar huria...</span>
                                     </div>
-                                  )
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
+                                  ) : huriasForResort.length === 0 ? (
+                                    <div className="px-5 pl-18 py-2 text-xs text-muted italic">
+                                      Tidak ada data huria pada resort ini.
+                                    </div>
+                                  ) : (
+                                    huriasForResort.map((h) => {
+                                      const hId = String(h.id)
+                                      const isHuriaChecked = selected.huria.includes(hId)
+
+                                      return (
+                                        <div
+                                          key={hId}
+                                          onClick={() => handleToggle('huria', h.id)}
+                                          className={`group flex items-center justify-between px-4 pl-18 py-2 cursor-pointer transition-colors ${
+                                            isHuriaChecked
+                                              ? 'bg-emerald-50/70 text-emerald-950 font-semibold'
+                                              : 'hover:bg-emerald-50/30 text-ink'
+                                          }`}
+                                        >
+                                          <div className="flex items-center gap-2.5 min-w-0">
+                                            {/* Checkbox Huria */}
+                                            <CustomCheckbox
+                                              checked={isHuriaChecked}
+                                              disabled={locks.huria}
+                                              id={`cb-huria-${h.id}`}
+                                              onChange={() => handleToggle('huria', h.id)}
+                                            />
+
+                                            {/* Ikon & Nama Huria */}
+                                            <div className="flex items-center gap-1.5 min-w-0">
+                                              <Church className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                                              <span className="text-xs truncate">{h.nama}</span>
+                                            </div>
+                                          </div>
+
+                                          {/* Status Terpilih Huria */}
+                                          <div className="flex items-center gap-1.5 shrink-0">
+                                            {isHuriaChecked && (
+                                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-700 text-white shadow-2xs">
+                                                Dipilih
+                                              </span>
+                                            )}
+                                            {locks.huria && <Lock className="w-3 h-3 text-muted" />}
+                                          </div>
+                                        </div>
+                                      )
+                                    })
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })
+                      )}
                     </div>
                   )}
                 </div>
