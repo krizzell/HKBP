@@ -1640,3 +1640,108 @@ export const SvgTreemapChart = ({
     </div>
   )
 }
+
+const getChartValue = (row, item, singleSeries) => Number(row[item.key] ?? (singleSeries ? row.value : 0))
+
+export const SvgHorizontalBarChart = ({ data = [], series = [], height = 260, valueFormatter = formatCompactRupiah }) => {
+  if (!data.length) return <div className="flex h-40 items-center justify-center text-xs text-muted">Tidak ada data untuk grafik</div>
+  const activeSeries = series.length ? series : [{ key: 'value', label: 'Nilai', color: 'var(--color-chart-1)' }]
+  const values = data.map((row) => activeSeries.reduce((sum, item) => sum + getChartValue(row, item, activeSeries.length === 1), 0))
+  const maxValue = Math.max(...values, 1)
+  const width = 860
+  const left = 190
+  const rowHeight = Math.max(26, Math.min(42, (height - 20) / data.length))
+
+  return (
+    <div className="w-full overflow-x-auto">
+      <svg viewBox={`0 0 ${width} ${Math.max(height, data.length * rowHeight + 20)}`} className="w-full h-auto">
+        {data.map((row, index) => {
+          const value = values[index]
+          const y = 10 + index * rowHeight
+          const barWidth = (value / maxValue) * (width - left - 45)
+          return (
+            <g key={row.key || index}>
+              <text x={left - 10} y={y + rowHeight / 2 + 4} textAnchor="end" className="text-[10px] font-medium" fill="var(--color-muted)">{row.label}</text>
+              <rect x={left} y={y + 5} width={width - left - 45} height={rowHeight - 10} rx="4" fill="var(--color-canvas)" />
+              <rect x={left} y={y + 5} width={Math.max(value ? 4 : 0, barWidth)} height={rowHeight - 10} rx="4" fill={activeSeries[0].color} opacity="0.88" />
+              <text x={left + barWidth + 8} y={y + rowHeight / 2 + 4} className="text-[10px] font-bold" fill="var(--color-ink)">{valueFormatter(value)}</text>
+            </g>
+          )
+        })}
+      </svg>
+    </div>
+  )
+}
+
+export const SvgBoxPlotChart = ({ data = [], series = [], height = 260, valueFormatter = formatCompactRupiah }) => {
+  const activeSeries = series.length ? series : [{ key: 'value', label: 'Nilai', color: 'var(--color-chart-1)' }]
+  const distributions = activeSeries.map((item) => {
+    const values = data.map((row) => getChartValue(row, item, activeSeries.length === 1)).sort((a, b) => a - b)
+    const percentile = (position) => values[Math.min(values.length - 1, Math.max(0, Math.floor(position * (values.length - 1))))] || 0
+    return { ...item, min: values[0] || 0, q1: percentile(0.25), median: percentile(0.5), q3: percentile(0.75), max: values[values.length - 1] || 0 }
+  })
+  const maxValue = Math.max(...distributions.map((item) => item.max), 1)
+  const width = 860
+  const top = 18
+  const bottom = height - 34
+  const xStep = width / (distributions.length + 1)
+  const y = (value) => bottom - (value / maxValue) * (bottom - top)
+
+  return (
+    <div className="w-full overflow-x-auto">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
+        {[0, 0.25, 0.5, 0.75, 1].map((tick) => (
+          <g key={tick}>
+            <line x1="40" y1={y(maxValue * tick)} x2={width - 20} y2={y(maxValue * tick)} stroke="var(--color-line)" strokeDasharray="3 3" />
+            <text x="34" y={y(maxValue * tick) + 3} textAnchor="end" className="text-[9px]" fill="var(--color-muted)">{valueFormatter(maxValue * tick)}</text>
+          </g>
+        ))}
+        {distributions.map((item, index) => {
+          const x = xStep * (index + 1)
+          return (
+            <g key={item.key}>
+              <line x1={x} y1={y(item.min)} x2={x} y2={y(item.max)} stroke={item.color} strokeWidth="2" />
+              <line x1={x - 16} y1={y(item.min)} x2={x + 16} y2={y(item.min)} stroke={item.color} strokeWidth="2" />
+              <line x1={x - 16} y1={y(item.max)} x2={x + 16} y2={y(item.max)} stroke={item.color} strokeWidth="2" />
+              <rect x={x - 28} y={y(item.q3)} width="56" height={Math.max(3, y(item.q1) - y(item.q3))} fill={item.color} opacity="0.25" stroke={item.color} strokeWidth="2" />
+              <line x1={x - 28} y1={y(item.median)} x2={x + 28} y2={y(item.median)} stroke={item.color} strokeWidth="3" />
+              <text x={x} y={height - 10} textAnchor="middle" className="text-[10px] font-semibold" fill="var(--color-muted)">{item.label}</text>
+            </g>
+          )
+        })}
+      </svg>
+    </div>
+  )
+}
+
+export const SvgHeatmapChart = ({ data = [], series = [], height = 260, valueFormatter = formatCompactRupiah }) => {
+  const activeSeries = series.length ? series : [{ key: 'value', label: 'Nilai', color: 'var(--color-chart-1)' }]
+  const width = 860
+  const left = 150
+  const top = 32
+  const cellWidth = Math.max(32, (width - left - 20) / Math.max(data.length, 1))
+  const cellHeight = Math.max(22, Math.min(34, (height - top - 20) / Math.max(activeSeries.length, 1)))
+  const maxValue = Math.max(...data.flatMap((row) => activeSeries.map((item) => getChartValue(row, item, activeSeries.length === 1))), 1)
+
+  return (
+    <div className="relative w-full overflow-x-auto">
+      <svg viewBox={`0 0 ${width} ${Math.max(height, top + activeSeries.length * cellHeight + 20)}`} className="w-full h-auto">
+        {data.map((row, column) => <text key={row.key || column} x={left + column * cellWidth + cellWidth / 2} y="18" textAnchor="middle" className="text-[9px] font-medium" fill="var(--color-muted)">{row.label}</text>)}
+        {activeSeries.map((item, rowIndex) => (
+          <g key={item.key}>
+            <text x={left - 8} y={top + rowIndex * cellHeight + cellHeight / 2 + 3} textAnchor="end" className="text-[10px] font-semibold" fill="var(--color-muted)">{item.label}</text>
+            {data.map((row, column) => {
+              const value = getChartValue(row, item, activeSeries.length === 1)
+              return (
+                <g key={`${item.key}-${row.key || column}`}>
+                  <rect x={left + column * cellWidth + 1} y={top + rowIndex * cellHeight + 1} width={cellWidth - 2} height={cellHeight - 2} rx="3" fill="var(--color-primary)" opacity={value / maxValue} />
+                  <title>{`${item.label} - ${row.label}: ${valueFormatter(value)}`}</title>
+                </g>
+              )
+            })}
+          </g>
+        ))}
+      </svg>
+    </div>
+  )
+}

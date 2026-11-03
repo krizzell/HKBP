@@ -40,7 +40,11 @@ import {
   SvgHistogramChart,
   SvgAreaChart,
   SvgTreemapChart,
+  SvgHorizontalBarChart,
+  SvgBoxPlotChart,
+  SvgHeatmapChart,
 } from '../components/charts/InteractiveCharts'
+import { getAvailableChartTypeIds } from '../lib/chartRecommendations'
 import { useOrganisasiFilter } from '../hooks/useOrganisasiFilter'
 import { OrganisasiFilterBar } from '../components/OrganisasiFilterBar'
 import { PeriodeFilter } from '../components/PeriodeFilter'
@@ -99,6 +103,13 @@ const CHART_TYPES = [
     description: 'Komparasi nilai per entitas / periode',
   },
   {
+    id: 'horizontal-bar',
+    label: 'Batang Horizontal',
+    shortLabel: 'Batang Horizontal',
+    icon: BarChart3,
+    description: 'Komparasi dengan label kategori panjang',
+  },
+  {
     id: 'pie',
     label: 'Lingkaran (Pie Chart)',
     shortLabel: 'Lingkaran',
@@ -120,6 +131,13 @@ const CHART_TYPES = [
     description: 'Distribusi frekuensi rentang nilai',
   },
   {
+    id: 'box-plot',
+    label: 'Box Plot',
+    shortLabel: 'Box Plot',
+    icon: BarChart3,
+    description: 'Median, kuartil, rentang, dan outlier',
+  },
+  {
     id: 'area',
     label: 'Area Chart',
     shortLabel: 'Area Chart',
@@ -132,6 +150,13 @@ const CHART_TYPES = [
     shortLabel: 'Treemap',
     icon: LayoutGrid,
     description: 'Hierarki proporsi ubin persegi',
+  },
+  {
+    id: 'heatmap',
+    label: 'Heatmap',
+    shortLabel: 'Heatmap',
+    icon: LayoutGrid,
+    description: 'Intensitas nilai antarwilayah dan periode',
   },
 ]
 
@@ -612,6 +637,27 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
     })
   }, [comparedEntities, entityStats])
 
+  const availableChartTypeIds = useMemo(
+    () =>
+      getAvailableChartTypeIds({
+        chartData,
+        series,
+        hasGeographicData: false,
+      }),
+    [chartData, series],
+  )
+
+  const availableChartTypes = useMemo(
+    () => CHART_TYPES.filter((type) => availableChartTypeIds.includes(type.id)),
+    [availableChartTypeIds],
+  )
+
+  useEffect(() => {
+    if (availableChartTypes.length > 0 && !availableChartTypeIds.includes(chartType)) {
+      setChartType(availableChartTypes[0].id)
+    }
+  }, [availableChartTypeIds, availableChartTypes, chartType])
+
   // Data Tabel Perbandingan yang terurut secara stabil & konsisten
   const sortedComparedEntities = useMemo(() => {
     return [...comparedEntities].sort((a, b) => {
@@ -831,26 +877,60 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
         </button>
       </div>
 
-      {/* 2. FILTER WILAYAH (Khusus SuperAdmin) */}
-      {!isAdmin && <OrganisasiFilterBar filterState={organisasiFilter} />}
+      {/* 2. WORKSPACE: LINGKUP WILAYAH (KIRI) & ANALISIS (KANAN) */}
+      <div className="grid grid-cols-1 lg:grid-cols-10 gap-5 items-start">
+        <aside className="min-w-0 lg:col-span-3">
+          {!isAdmin ? (
+            <OrganisasiFilterBar filterState={organisasiFilter} />
+          ) : (
+            <div className="bg-surface rounded-2xl border border-line p-5 sm:p-6 shadow-xs w-full">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary-50 text-primary flex items-center justify-center shrink-0 border border-primary-100">
+                  <GitCompare className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-ink tracking-tight">
+                    Lingkup Wilayah
+                  </h2>
+                  <p className="text-xs text-muted mt-1 leading-relaxed">
+                    Lingkup analisis dikunci pada wilayah yang ditetapkan untuk akun Anda.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-5 rounded-xl border border-primary-100 bg-primary-50/60 p-4">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-primary-700">
+                  Huria aktif
+                </div>
+                <div className="mt-1 text-sm font-bold text-ink">
+                  {user?.namaHuria || 'Huria Anda'}
+                </div>
+                <div className="mt-2 space-y-1 text-xs text-muted">
+                  {user?.namaResort && <div>Resort: <span className="font-semibold text-ink">{user.namaResort}</span></div>}
+                  {user?.namaDistrik && <div>Distrik: <span className="font-semibold text-ink">{user.namaDistrik}</span></div>}
+                </div>
+              </div>
+            </div>
+          )}
+        </aside>
 
-      {/* 3. VISUALIZATION CANVAS & METRICS ATAU EMPTY STATE */}
-      {comparedEntities.length === 0 ? (
-        <div className="bg-surface rounded-2xl border border-line p-10 sm:p-14 text-center flex flex-col items-center justify-center gap-3.5 shadow-xs w-full">
-          <div className="w-14 h-14 rounded-2xl bg-primary-50 text-primary flex items-center justify-center border border-primary-100 shadow-2xs">
-            <GitCompare className="w-7 h-7 text-primary" />
-          </div>
-          <div className="max-w-md">
-            <h3 className="text-base sm:text-lg font-bold text-ink m-0">
-              Belum Ada Wilayah yang Dipilih
-            </h3>
-            <p className="text-xs sm:text-sm text-muted mt-2 mb-0 leading-relaxed">
-              Silakan pilih minimal satu wilayah pada filter <strong>Lingkup Wilayah</strong> di atas untuk memunculkan visualisasi grafik dan tabel komparasi data.
-            </p>
-          </div>
-        </div>
-      ) : (
-        <>
+        <main className="min-w-0 lg:col-span-7 flex flex-col gap-5">
+          {/* 3. VISUALIZATION CANVAS & METRICS ATAU EMPTY STATE */}
+          {comparedEntities.length === 0 ? (
+            <div className="bg-surface rounded-2xl border border-line p-10 sm:p-14 text-center flex flex-col items-center justify-center gap-3.5 shadow-xs w-full min-h-[360px]">
+              <div className="w-14 h-14 rounded-2xl bg-primary-50 text-primary flex items-center justify-center border border-primary-100 shadow-2xs">
+                <GitCompare className="w-7 h-7 text-primary" />
+              </div>
+              <div className="max-w-md">
+                <h3 className="text-base sm:text-lg font-bold text-ink m-0">
+                  Belum Ada Wilayah yang Dipilih
+                </h3>
+                <p className="text-xs sm:text-sm text-muted mt-2 mb-0 leading-relaxed">
+                  Silakan pilih minimal satu wilayah pada panel <strong>Lingkup Wilayah</strong> di sebelah kiri untuk memunculkan visualisasi grafik dan tabel komparasi data.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <>
           {/* 3. PARAMETER VISUALISASI (Termasuk 1 Filtering Waktu Tunggal di Atas Visualisasi) */}
           <div className="bg-surface rounded-2xl border border-line p-4 sm:p-5 shadow-xs w-full">
             <div className="flex items-center justify-between gap-2 mb-3.5 pb-2.5 border-b border-line">
@@ -871,9 +951,9 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
               </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-3.5 items-end">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-4 items-end">
               {/* 1. Sumber Data & Kategori (Span 3) */}
-              <div className="lg:col-span-3 flex flex-col justify-end">
+              <div className="xl:col-span-6 flex flex-col justify-end min-w-0">
                 <label className="block text-xs font-semibold text-muted mb-1 truncate">
                   1. Sumber Data & Kategori
                 </label>
@@ -914,7 +994,7 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
               </div>
 
               {/* 2. Filtering Waktu (Menggantikan Dimensi X-Axis) (Span 4) */}
-              <div className="lg:col-span-4 flex flex-col justify-end">
+              <div className="xl:col-span-6 flex flex-col justify-end min-w-0">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-end">
                   <PeriodeFilter
                     periode={organisasiFilter.periode}
@@ -923,8 +1003,8 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
                 </div>
               </div>
 
-              {/* 3. Metrik Agregasi (Span 2) */}
-              <div className="lg:col-span-2 flex flex-col justify-end">
+              {/* 3. Metrik Agregasi (Span 5) */}
+              <div className="xl:col-span-5 flex flex-col justify-end min-w-0">
                 <label className="block text-xs font-semibold text-muted mb-1 truncate">
                   3. Metrik Agregasi
                 </label>
@@ -945,8 +1025,8 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
                 </div>
               </div>
 
-              {/* 4. Tipe Grafik (Span 3) - Dropdown / Select Input Ala Tableau */}
-              <div className="lg:col-span-3 flex flex-col justify-end relative" ref={chartDropdownRef}>
+              {/* 4. Tipe Grafik (Span 7) - Dropdown / Select Input Ala Tableau */}
+              <div className="xl:col-span-7 flex flex-col justify-end relative min-w-0" ref={chartDropdownRef}>
                 <label className="block text-xs font-semibold text-muted mb-1 truncate">
                   4. Tipe Grafik
                 </label>
@@ -980,12 +1060,12 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
                     <div className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted flex items-center justify-between border-b border-line/60 mb-1">
                       <span>Tipe Visualisasi (Tableau)</span>
                       <span className="text-[9px] bg-primary-50 text-primary px-1.5 py-0.2 rounded font-bold">
-                        {CHART_TYPES.length} Tipe
+                        {availableChartTypes.length} Tipe
                       </span>
                     </div>
 
                     <div className="space-y-0.5 max-h-[320px] overflow-y-auto">
-                      {CHART_TYPES.map((t) => {
+                      {availableChartTypes.map((t) => {
                         const Icon = t.icon
                         const isActive = chartType === t.id
                         return (
@@ -1108,6 +1188,17 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
                     }
                   />
                 )
+              ) : chartType === 'horizontal-bar' ? (
+                <SvgHorizontalBarChart
+                  data={chartData}
+                  series={series}
+                  height={260}
+                  valueFormatter={(v) =>
+                    dataSource.startsWith('kehadiran') || metric === 'COUNT'
+                      ? new Intl.NumberFormat('id-ID').format(v)
+                      : formatCompactRupiah(v)
+                  }
+                />
               ) : chartType === 'pie' ? (
                 <SvgDonutChart
                   data={isMultiEntity ? donutData : chartData}
@@ -1141,6 +1232,17 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
                   }
                   isCurrency={!(dataSource.startsWith('kehadiran') || metric === 'COUNT')}
                 />
+              ) : chartType === 'box-plot' ? (
+                <SvgBoxPlotChart
+                  data={chartData}
+                  series={series}
+                  height={260}
+                  valueFormatter={(v) =>
+                    dataSource.startsWith('kehadiran') || metric === 'COUNT'
+                      ? new Intl.NumberFormat('id-ID').format(v)
+                      : formatCompactRupiah(v)
+                  }
+                />
               ) : chartType === 'area' ? (
                 <SvgAreaChart
                   data={chartData}
@@ -1165,6 +1267,17 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
                       ? new Intl.NumberFormat('id-ID').format(v)
                       : formatCompactRupiah(v)
                   }
+                />
+              ) : chartType === 'heatmap' ? (
+                <SvgHeatmapChart
+                data={chartData}
+                series={series}
+                height={260}
+                valueFormatter={(v) =>
+                  dataSource.startsWith('kehadiran') || metric === 'COUNT'
+                    ? new Intl.NumberFormat('id-ID').format(v)
+                    : formatCompactRupiah(v)
+                }
                 />
               ) : null}
             </div>
@@ -1271,8 +1384,10 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
               </table>
             </div>
           </div>
-        </>
-      )}
+            </>
+          )}
+        </main>
+      </div>
     </div>
   )
 }

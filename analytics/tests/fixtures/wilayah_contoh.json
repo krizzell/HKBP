@@ -1,0 +1,77 @@
+[
+  {
+    "Pusat": {
+      "Distrik": [
+        {
+          "NamaDistrik": "Distrik Contoh",
+          "Resort": [
+            {
+              "NamaResort": "Resort Contoh",
+              "Huria": [
+                {
+                  "IdHuria": "H-TEST-1",
+                  "NamaHuria": "HKBP Contoh",
+                  "JumlahJemaat": "120",
+                  "SesiIbadah": [
+                    {
+                      "IdSesi": "S-1",
+                      "NamaSesi": "Pagi",
+                      "Tanggal": "2026-01-05",
+                      "JumlahHadir": "80",
+                      "Pelean": [{"Jenis": "1a", "Nominal": "100000"}]
+                    }
+                  ],
+                  "KategoriPemasukan": [
+                    {"IdKategori": "K-1", "NamaKategori": "Pelean Minggu"}
+                  ],
+                  "PemasukanJemaat": [
+                    {
+                      "IdTransaksi": "T-1",
+                      "Tanggal": "2026-01-05",
+                      "Nominal": "100000",
+                      "IdKategori": "K-1",
+                      "Keterangan": "Pelean Minggu"
+                    }
+                  ],
+                  "AlokasiTransaksi": [
+                    {
+                      "IdAlokasi": "A-1",
+                      "IdTransaksi": "T-1",
+                      "Peruntukan": "Setoran Pusat",
+                      "Nominal": "55000"
+                    }
+                  ],
+                  "SetoranPusat": [
+                    {
+                      "IdSetoran": "SP-1",
+                      "Periode": "2026-01",
+                      "TanggalSetor": "2026-02-01",
+                      "TotalSetoran": "55000"
+                    }
+                  ],
+                  "RincianSetoranPusat": [
+                    {
+                      "IdRincian": "RS-1",
+                      "IdSetoran": "SP-1",
+                      "IdAlokasi": "A-1",
+                      "NominalDilunasi": "55000"
+                    }
+                  ]
+                },
+                {
+                  "NamaHuria": "HKBP Tanpa ID",
+                  "SesiIbadah": null,
+                  "PemasukanJemaat": null,
+                  "AlokasiTransaksi": null,
+                  "SetoranPusat": null,
+                  "RincianSetoranPusat": null,
+                  "KategoriPemasukan": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+]
