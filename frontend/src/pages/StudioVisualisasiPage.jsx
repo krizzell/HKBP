@@ -48,6 +48,7 @@ import { getAvailableChartTypeIds } from '../lib/chartRecommendations'
 import { useOrganisasiFilter } from '../hooks/useOrganisasiFilter'
 import { OrganisasiFilterBar } from '../components/OrganisasiFilterBar'
 import { PeriodeFilter } from '../components/PeriodeFilter'
+import { PythonAnalyticsPanel } from '../components/PythonAnalyticsPanel'
 
 // Metadata Sumber Data & Kategori untuk display dan ekspor CSV
 const DATA_SOURCE_META = {
@@ -842,6 +843,10 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
   }
 
   const isMultiEntity = comparedEntities.length >= 2
+  const analyticsHuriaIds = useMemo(
+    () => [...new Set(comparedEntities.flatMap((entity) => entity.hurias.map((huria) => huria.IdHuria).filter(Boolean).map(String)))],
+    [comparedEntities]
+  )
 
   return (
     <div className="flex flex-col gap-5 w-full font-sans">
@@ -914,6 +919,12 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
         </aside>
 
         <main className="min-w-0 lg:col-span-7 flex flex-col gap-5">
+          {comparedEntities.length > 0 && (
+            <PythonAnalyticsPanel
+              idHuria={analyticsHuriaIds}
+              kategori={dataSource.startsWith('pemasukan::') ? dataSource.split('::')[1] : undefined}
+            />
+          )}
           {/* 3. VISUALIZATION CANVAS & METRICS ATAU EMPTY STATE */}
           {comparedEntities.length === 0 ? (
             <div className="bg-surface rounded-2xl border border-line p-10 sm:p-14 text-center flex flex-col items-center justify-center gap-3.5 shadow-xs w-full min-h-[360px]">

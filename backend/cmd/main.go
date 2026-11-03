@@ -41,8 +41,9 @@ func main() {
 	huriaRepo := repository.NewHuriaRepository(db)
 	huriaSvc := service.NewHuriaService(huriaRepo, resortRepo, wilayahRepo)
 	huriaHandler := handler.NewHuriaHandler(huriaSvc)
+	analyticsHandler := handler.NewAnalyticsHandler(cfg)
 
-	r := router.New(cfg, wilayahHandler, authHandler, distrikHandler, resortHandler, huriaHandler)
+	r := router.New(cfg, wilayahHandler, authHandler, distrikHandler, resortHandler, huriaHandler, analyticsHandler)
 	log.Printf("Server backend HKBP V2 berjalan di port %s...\n", cfg.Port)
 	log.Fatal(r.Run(":" + cfg.Port))
 }

@@ -4,7 +4,7 @@ from collections.abc import Callable
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 
 from app.config import get_settings
-from app.routers import anomaly, clustering, correlation, data, forecast
+from app.routers import anomaly, clustering, correlation, data, drop, forecast
 
 app = FastAPI(title="HKBP Analytics", version="0.1.0")
 
@@ -41,6 +41,11 @@ app.include_router(
 app.include_router(
     correlation.router,
     prefix="/correlation",
+    dependencies=[Depends(require_internal_key)],
+)
+app.include_router(
+    drop.router,
+    prefix="/drop",
     dependencies=[Depends(require_internal_key)],
 )
 app.include_router(

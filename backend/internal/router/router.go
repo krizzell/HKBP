@@ -17,6 +17,7 @@ func New(
 	distrik *handler.DistrikHandler,
 	resort *handler.ResortHandler,
 	huria *handler.HuriaHandler,
+	analytics *handler.AnalyticsHandler,
 ) *gin.Engine {
 	r := gin.Default()
 	_ = r.SetTrustedProxies(nil)
@@ -43,6 +44,14 @@ func New(
 		api.GET("/health", func(c *gin.Context) {
 			c.JSON(200, gin.H{"status": "ok", "version": "v2"})
 		})
+
+		analyticsGroup := api.Group("/analytics")
+		{
+			analyticsGroup.POST("/forecast", analytics.Forecast)
+			analyticsGroup.POST("/anomaly", analytics.Anomaly)
+			analyticsGroup.POST("/correlation", analytics.Correlation)
+			analyticsGroup.POST("/drop", analytics.Drop)
+		}
 
 		// Auth
 		authGroup := api.Group("/auth")
