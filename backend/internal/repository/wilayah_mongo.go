@@ -2,23 +2,21 @@ package repository
 
 import (
 	"HKBP/internal/domain"
-	"HKBP/internal/seeder"
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"strings"
-	"sync"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 type wilayahMongo struct {
 	db      *mongo.Database
 	col     *mongo.Collection
 	userCol *mongo.Collection
-	mu      sync.RWMutex
-	cache   []domain.Wilayah
 }
 
 var defaultUsers = []domain.User{
@@ -54,7 +52,7 @@ var defaultUsers = []domain.User{
 		Password:    "Admin123#",
 		Nama:        "Admin Huria HKBP Sudirman Jakarta",
 		Role:        "Admin",
-		IdHuria:     "H-1.1.1",
+		IdHuria:     "H-1.1.1.1",
 		NamaHuria:   "HKBP Sudirman",
 		NamaResort:  "Resort Tebet",
 		NamaDistrik: "Distrik VIII DKI Jakarta",
@@ -65,7 +63,7 @@ var defaultUsers = []domain.User{
 		Password:    "Admin123#",
 		Nama:        "Admin Huria HKBP Sudirman Jakarta",
 		Role:        "Admin",
-		IdHuria:     "H-1.1.1",
+		IdHuria:     "H-1.1.1.1",
 		NamaHuria:   "HKBP Sudirman",
 		NamaResort:  "Resort Tebet",
 		NamaDistrik: "Distrik VIII DKI Jakarta",
@@ -76,7 +74,7 @@ var defaultUsers = []domain.User{
 		Password:    "Admin123#",
 		Nama:        "Admin Huria HKBP Pearaja Tarutung",
 		Role:        "Admin",
-		IdHuria:     "H-2.1.1",
+		IdHuria:     "H-2.1.1.1",
 		NamaHuria:   "HKBP Pearaja",
 		NamaResort:  "Resort Pearaja Tarutung",
 		NamaDistrik: "Distrik II Silindung",
@@ -87,7 +85,7 @@ var defaultUsers = []domain.User{
 		Password:    "Admin123#",
 		Nama:        "Admin Huria HKBP Pearaja Tarutung",
 		Role:        "Admin",
-		IdHuria:     "H-2.1.1",
+		IdHuria:     "H-2.1.1.1",
 		NamaHuria:   "HKBP Pearaja",
 		NamaResort:  "Resort Pearaja Tarutung",
 		NamaDistrik: "Distrik II Silindung",
@@ -95,97 +93,70 @@ var defaultUsers = []domain.User{
 }
 
 func NewWilayahRepository(db *mongo.Database) domain.WilayahRepository {
-	repo := &wilayahMongo{
-		db:      db,
-		col:     db.Collection("HKBP"),
-		userCol: db.Collection("users"),
+	repo := &wilayahMongo{db: db, col: db.Collection("HKBP"), userCol: db.Collection("users")}
+	// Tidak membuat seeder otomatis ataupun menimpa wilayah.json saat startup.
+	// Jika master benar-benar kosong, salin identitas distrik/resort/huria dari
+	// hierarki lama. Proses ini hanya menambah dokumen, bukan menghapus hierarki.
+	if err := BootstrapMasterFromTree(context.Background(), db); err != nil {
+		log.Printf("Master wilayah belum dapat dibootstrap: %v", err)
 	}
-
-	// Inisialisasi seed data jika koleksi kosong
-	ctx := context.Background()
-	count, err := repo.col.CountDocuments(ctx, bson.M{})
-	if err != nil || count == 0 {
-		log.Println("Database HKBP kosong atau baru, melakukan initial seeding...")
-		seeded, seedErr := seeder.GenerateSeedData("wilayah.json")
-		if seedErr != nil {
-			log.Println("Gagal generate seeder:", seedErr)
-		} else {
-			_ = repo.SaveAll(ctx, seeded)
-			_ = seeder.WriteSeededToFile("wilayah.json", seeded)
-			log.Printf("Seeding berhasil disimpan! Total distrik: %d\n", len(seeded[0].Pusat.Distrik))
+	// Akun contoh hanya dibuat jika belum ada, sehingga perubahan pengguna tidak
+	// terhapus setiap backend dijalankan.
+	for _, u := range defaultUsers {
+		err := repo.userCol.FindOne(context.Background(), bson.M{"email": strings.ToLower(u.Email)}).Err()
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			if _, err = repo.userCol.InsertOne(context.Background(), u); err != nil {
+				log.Printf("Gagal membuat akun awal %s: %v", u.Email, err)
+			}
+		} else if err != nil {
+			log.Printf("Gagal memeriksa akun %s: %v", u.Email, err)
 		}
 	}
-
-	// Selalu sinkronkan pengguna default untuk integritas RBAC
-	for _, u := range defaultUsers {
-		_, _ = repo.userCol.DeleteMany(ctx, bson.M{"email": strings.ToLower(u.Email)})
-		_, _ = repo.userCol.InsertOne(ctx, u)
-	}
-
 	return repo
 }
 
 func (r *wilayahMongo) FindAll(ctx context.Context) ([]domain.Wilayah, error) {
 	cursor, err := r.col.Find(ctx, bson.M{})
 	if err != nil {
-		r.mu.RLock()
-		defer r.mu.RUnlock()
-		if len(r.cache) > 0 {
-			return r.cache, nil
-		}
-		// Fallback ke local wilayah.json
-		seeded, errLocal := seeder.GenerateSeedData("wilayah.json")
-		if errLocal == nil {
-			return seeded, nil
-		}
 		return nil, err
 	}
-
-	result := []domain.Wilayah{}
+	defer cursor.Close(ctx)
+	result := make([]domain.Wilayah, 0)
 	if err := cursor.All(ctx, &result); err != nil {
 		return nil, err
 	}
-
-	if len(result) == 0 {
-		seeded, _ := seeder.GenerateSeedData("wilayah.json")
-		if len(seeded) > 0 {
-			_ = r.SaveAll(ctx, seeded)
-			return seeded, nil
-		}
-	}
-
-	r.mu.Lock()
-	r.cache = result
-	r.mu.Unlock()
-
 	return result, nil
 }
 
+// SaveAll dipakai hanya untuk reset eksplisit; operasi CRUD rutin tidak pernah
+// boleh menggunakan DeleteMany/InsertMany pada seluruh collection.
 func (r *wilayahMongo) SaveAll(ctx context.Context, data []domain.Wilayah) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	r.cache = data
-
-	// Ganti semua dokumen di collection
-	_, err := r.col.DeleteMany(ctx, bson.M{})
+	if len(data) != 1 {
+		return fmt.Errorf("penyimpanan hierarki ditolak: wajib tepat 1 dokumen pusat, diterima %d", len(data))
+	}
+	var previous bson.M
+	err := r.col.FindOne(ctx, bson.M{}).Decode(&previous)
+	if errors.Is(err, mongo.ErrNoDocuments) {
+		_, err = r.col.InsertOne(ctx, data[0])
+		return err
+	}
 	if err != nil {
-		log.Println("Warning delete existing documents:", err)
+		return err
 	}
-
-	docs := make([]any, len(data))
-	for i, v := range data {
-		docs[i] = v
-	}
-
-	_, err = r.col.InsertMany(ctx, docs)
+	n, err := r.col.CountDocuments(ctx, bson.M{})
 	if err != nil {
-		log.Println("Warning insert to mongodb:", err)
+		return err
 	}
-
-	_ = seeder.WriteSeededToFile("wilayah.json", data)
-	_ = seeder.WriteSeededToFile("../wilayah.json", data)
-
+	if n != 1 {
+		return fmt.Errorf("penyimpanan ditolak: terdapat %d dokumen pusat; butuh penanganan manual", n)
+	}
+	result, err := r.col.ReplaceOne(ctx, bson.M{"_id": previous["_id"]}, data[0])
+	if err != nil {
+		return err
+	}
+	if result.MatchedCount != 1 {
+		return errors.New("dokumen pusat tidak ditemukan")
+	}
 	return nil
 }
 
@@ -210,21 +181,24 @@ func (r *wilayahMongo) FindHuria(ctx context.Context, idHuria string) (*domain.H
 	return nil, errors.New("Huria tidak ditemukan")
 }
 
+// UpdateHuria mengubah satu Huria secara atomik menggunakan arrayFilters.
+// Versi digunakan untuk menolak penulisan basi bila dua admin mengubah Huria
+// yang sama hampir bersamaan. Pembaruan Huria lain tidak ikut tertimpa.
 func (r *wilayahMongo) UpdateHuria(ctx context.Context, idHuria string, updated domain.Huria) error {
 	all, err := r.FindAll(ctx)
 	if err != nil {
 		return err
 	}
-
+	var parentDist domain.Distrik
+	var parentRes domain.Resort
+	var old domain.Huria
 	found := false
-	for wi := range all {
-		for di := range all[wi].Pusat.Distrik {
-			for ri := range all[wi].Pusat.Distrik[di].Resort {
-				for hi := range all[wi].Pusat.Distrik[di].Resort[ri].Huria {
-					h := &all[wi].Pusat.Distrik[di].Resort[ri].Huria[hi]
+	for _, w := range all {
+		for _, d := range w.Pusat.Distrik {
+			for _, res := range d.Resort {
+				for _, h := range res.Huria {
 					if h.IdHuria == idHuria || h.NamaHuria == idHuria {
-						all[wi].Pusat.Distrik[di].Resort[ri].Huria[hi] = updated
-						found = true
+						parentDist, parentRes, old, found = d, res, h, true
 						break
 					}
 				}
@@ -240,12 +214,40 @@ func (r *wilayahMongo) UpdateHuria(ctx context.Context, idHuria string, updated 
 			break
 		}
 	}
-
 	if !found {
 		return errors.New("Huria tidak ditemukan")
 	}
-
-	return r.SaveAll(ctx, all)
+	if updated.Versi != old.Versi {
+		return errors.New("konflik data: Huria sudah diubah pengguna lain, muat ulang terlebih dahulu")
+	}
+	updated.IdHuria = old.IdHuria
+	updated.Versi = old.Versi + 1
+	dFilter := bson.M{"d.IdDistrik": parentDist.IdDistrik}
+	if parentDist.IdDistrik == "" {
+		dFilter = bson.M{"d.NamaDistrik": parentDist.NamaDistrik}
+	}
+	rFilter := bson.M{"r.IdResort": parentRes.IdResort}
+	if parentRes.IdResort == "" {
+		rFilter = bson.M{"r.NamaResort": parentRes.NamaResort}
+	}
+	hFilter := bson.M{"h.IdHuria": old.IdHuria}
+	if old.Versi == 0 {
+		hFilter["h.Versi"] = bson.M{"$exists": false}
+	} else {
+		hFilter["h.Versi"] = old.Versi
+	}
+	result, err := r.col.UpdateOne(ctx,
+		bson.M{"Pusat.Distrik.Resort.Huria.IdHuria": old.IdHuria},
+		bson.M{"$set": bson.M{"Pusat.Distrik.$[d].Resort.$[r].Huria.$[h]": updated}},
+		options.UpdateOne().SetArrayFilters([]any{dFilter, rFilter, hFilter}),
+	)
+	if err != nil {
+		return err
+	}
+	if result.ModifiedCount == 0 {
+		return errors.New("konflik perubahan Huria; silakan refresh data sebelum menyimpan ulang")
+	}
+	return nil
 }
 
 func (r *wilayahMongo) FindUserByEmail(ctx context.Context, email string) (*domain.User, error) {
@@ -261,199 +263,4 @@ func (r *wilayahMongo) FindUserByEmail(ctx context.Context, email string) (*doma
 		return nil, err
 	}
 	return &u, nil
-}
-
-
-func (r *wilayahMongo) SyncTree(ctx context.Context) error {
-	// 1. Ambil dokumen HKBP saat ini untuk mempertahankan data finansial huria yang ada
-	existingTree, err := r.FindAll(ctx)
-	existingHurias := make(map[string]domain.Huria)
-	if err == nil {
-		for _, w := range existingTree {
-			for _, d := range w.Pusat.Distrik {
-				for _, res := range d.Resort {
-					for _, h := range res.Huria {
-						existingHurias[h.IdHuria] = h
-						existingHurias[strings.ToLower(strings.TrimSpace(h.NamaHuria))] = h
-					}
-				}
-			}
-		}
-	}
-
-	// 2. Ambil seluruh Distrik aktif
-	distrikCol := r.db.Collection("distrik")
-	resortCol := r.db.Collection("resort")
-	huriaCol := r.db.Collection("huria")
-
-	dCur, err := distrikCol.Find(ctx, bson.M{"Aktif": true})
-	if err != nil {
-		return err
-	}
-	var distrikDocs []domain.DistrikDoc
-	if err := dCur.All(ctx, &distrikDocs); err != nil {
-		return err
-	}
-
-	// 3. Ambil seluruh Resort aktif
-	rCur, err := resortCol.Find(ctx, bson.M{"Aktif": true})
-	if err != nil {
-		return err
-	}
-	var resortDocs []domain.ResortDoc
-	if err := rCur.All(ctx, &resortDocs); err != nil {
-		return err
-	}
-
-	// 4. Ambil seluruh Huria aktif
-	hCur, err := huriaCol.Find(ctx, bson.M{"Aktif": true})
-	if err != nil {
-		return err
-	}
-	var huriaDocs []domain.HuriaDoc
-	if err := hCur.All(ctx, &huriaDocs); err != nil {
-		return err
-	}
-
-	// Kelompokkan Huria berdasarkan IdResort
-	huriasByResort := make(map[string][]domain.HuriaDoc)
-	for _, h := range huriaDocs {
-		resKey := h.IdResort.Hex()
-		huriasByResort[resKey] = append(huriasByResort[resKey], h)
-	}
-
-	// Kelompokkan Resort berdasarkan IdDistrik
-	resortsByDistrik := make(map[string][]domain.ResortDoc)
-	for _, res := range resortDocs {
-		distKey := res.IdDistrik.Hex()
-		resortsByDistrik[distKey] = append(resortsByDistrik[distKey], res)
-	}
-
-	// 5. Bangun struktur Pusat -> Distrik -> Resort -> Huria
-	distrikList := []domain.Distrik{}
-
-	for _, dDoc := range distrikDocs {
-		resortList := []domain.Resort{}
-		resList := resortsByDistrik[dDoc.ID.Hex()]
-
-		for _, rDoc := range resList {
-			huriaList := []domain.Huria{}
-			hList := huriasByResort[rDoc.ID.Hex()]
-
-			for _, hDoc := range hList {
-				// Cari apakah data huria lama sudah ada
-				hKey := strings.ToLower(strings.TrimSpace(hDoc.Nama))
-				matched, found := existingHurias[hDoc.Kode]
-				if !found {
-					matched, found = existingHurias[hKey]
-				}
-
-				if found {
-					// Update atribut profil
-					matched.NamaHuria = hDoc.Nama
-					matched.IdHuria = hDoc.Kode
-					matched.LokasiHuria = hDoc.LokasiHuria
-					matched.TahunBerdiri = hDoc.TahunBerdiri
-					matched.NamaPendetaPimpinan = hDoc.NamaPendetaPimpinan
-					matched.JumlahJemaat = hDoc.JumlahJemaat
-					matched.KepalaKeluarga = hDoc.KepalaKeluarga
-					huriaList = append(huriaList, matched)
-				} else {
-					// Buat Huria baru dengan atribut lengkap
-					newHuria := domain.Huria{
-						NamaHuria:           hDoc.Nama,
-						IdHuria:             hDoc.Kode,
-						LokasiHuria:         hDoc.LokasiHuria,
-						TahunBerdiri:        hDoc.TahunBerdiri,
-						NamaPendetaPimpinan: hDoc.NamaPendetaPimpinan,
-						JumlahJemaat:        hDoc.JumlahJemaat,
-						KepalaKeluarga:      hDoc.KepalaKeluarga,
-						KategoriPemasukan: []domain.KategoriPemasukan{
-							{IdKategori: "K-01", NamaKategori: "Pelean Minggu (Ia, Ib, IIa, IIb)"},
-							{IdKategori: "K-02", NamaKategori: "Guguan / Iuran Taon Jemaat"},
-							{IdKategori: "K-03", NamaKategori: "Hamuliateon (Ucapan Syukur)"},
-							{IdKategori: "K-04", NamaKategori: "Pesta Gotilon (Pesta Panen)"},
-						},
-						Lunggu: []domain.Lunggu{
-							{IdLunggu: "L-01", NamaLunggu: "Lunggu Sion", Keterangan: "Sektor I"},
-							{IdLunggu: "L-02", NamaLunggu: "Lunggu Bethel", Keterangan: "Sektor II"},
-							{IdLunggu: "L-03", NamaLunggu: "Lunggu Jerusalem", Keterangan: "Sektor III"},
-						},
-					}
-					huriaList = append(huriaList, newHuria)
-				}
-			}
-
-			// Jika NamaPendetaResort masih kosong pada dokumen lama, derive dari Huria pertama atau fallback
-			pimpinanResort := strings.TrimSpace(rDoc.NamaPendetaResort)
-			if pimpinanResort == "" {
-				for _, h := range huriaList {
-					if h.NamaPendetaPimpinan != "" {
-						pimpinanResort = h.NamaPendetaPimpinan
-						break
-					}
-				}
-				if pimpinanResort == "" {
-					pimpinanResort = "Pdt. " + rDoc.Nama
-				}
-				_, _ = resortCol.UpdateOne(ctx, bson.M{"_id": rDoc.ID}, bson.M{"$set": bson.M{"NamaPendetaResort": pimpinanResort}})
-				rDoc.NamaPendetaResort = pimpinanResort
-			}
-
-			resortList = append(resortList, domain.Resort{
-				IdResort:          rDoc.ID.Hex(),
-				KodeResort:        rDoc.Kode,
-				NamaResort:        rDoc.Nama,
-				NamaPendetaResort: pimpinanResort,
-				Huria:             huriaList,
-			})
-		}
-
-		// Jika NamaPraeses masih kosong pada dokumen lama, derive dari daftar standar praeses
-		praeses := strings.TrimSpace(dDoc.NamaPraeses)
-		if praeses == "" {
-			namaLower := strings.ToLower(dDoc.Nama)
-			switch {
-			case strings.Contains(namaLower, "silindung"):
-				praeses = "Pdt. Hasudungan Siregar, S.Th"
-			case strings.Contains(namaLower, "humbang"):
-				praeses = "Pdt. Donald Sianturi, S.Th"
-			case strings.Contains(namaLower, "toba"):
-				praeses = "Pdt. Julson Pasaribu, S.Th"
-			case strings.Contains(namaLower, "sumatera timur"):
-				praeses = "Pdt. Robinsarhot Lumban Gaol, M.Div"
-			case strings.Contains(namaLower, "dki jakarta"):
-				praeses = "Pdt. Bernard Manik, M.Th"
-			case strings.Contains(namaLower, "medan"):
-				praeses = "Pdt. Henri Napitupulu, M.Th"
-			case strings.Contains(namaLower, "tabagsel"):
-				praeses = "Pdt. Ebsan B. Hutabarat, M.Th"
-			case strings.Contains(namaLower, "dairi"):
-				praeses = "Pdt. Riedel Sihotang, S.Th"
-			default:
-				praeses = "Praeses " + dDoc.Nama
-			}
-			_, _ = distrikCol.UpdateOne(ctx, bson.M{"_id": dDoc.ID}, bson.M{"$set": bson.M{"NamaPraeses": praeses}})
-			dDoc.NamaPraeses = praeses
-		}
-
-		distrikList = append(distrikList, domain.Distrik{
-			IdDistrik:   dDoc.ID.Hex(),
-			KodeDistrik: dDoc.Kode,
-			NamaDistrik: dDoc.Nama,
-			NamaPraeses: praeses,
-			Resort:      resortList,
-		})
-	}
-
-	newTree := []domain.Wilayah{
-		{
-			Pusat: domain.Pusat{
-				NamaPusat: "Kantor Pusat HKBP (Pearaja Tarutung)",
-				Distrik:   distrikList,
-			},
-		},
-	}
-
-	return r.SaveAll(ctx, newTree)
 }

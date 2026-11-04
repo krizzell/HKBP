@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"regexp"
 	"strings"
 	"time"
@@ -120,16 +121,10 @@ func (s *huriaService) Create(ctx context.Context, req domain.CreateHuriaRequest
 		return nil, err
 	}
 	if s.wilayahRepo != nil {
-		_ = s.wilayahRepo.SyncTree(ctx)
-	}
-	return doc, nil
-	if false {
-		if mongo.IsDuplicateKeyError(err) {
-			return nil, domain.ErrHuriaKodeDup
+		if err := s.wilayahRepo.SyncTree(ctx); err != nil {
+			return nil, fmt.Errorf("master tersimpan, tetapi sinkronisasi hierarki gagal (refresh sebelum mengulang): %w", err)
 		}
-		return nil, err
 	}
-
 	return doc, nil
 }
 
@@ -283,9 +278,10 @@ func (s *huriaService) Update(ctx context.Context, id string, req domain.UpdateH
 		return nil, err
 	}
 	if s.wilayahRepo != nil {
-		_ = s.wilayahRepo.SyncTree(ctx)
+		if err := s.wilayahRepo.SyncTree(ctx); err != nil {
+			return nil, fmt.Errorf("master terbarui, tetapi sinkronisasi hierarki gagal: %w", err)
+		}
 	}
-
 	return doc, nil
 }
 
@@ -318,7 +314,9 @@ func (s *huriaService) Delete(ctx context.Context, id string) error {
 		return err
 	}
 	if s.wilayahRepo != nil {
-		_ = s.wilayahRepo.SyncTree(ctx)
+		if err := s.wilayahRepo.SyncTree(ctx); err != nil {
+			return fmt.Errorf("master terhapus, tetapi sinkronisasi hierarki gagal: %w", err)
+		}
 	}
 	return nil
 }

@@ -34,7 +34,14 @@ def deteksi_drop_pemasukan(
 
     frame = pemasukan.copy()
     if kategori:
-        frame = frame[frame["namaKategori"].fillna("").eq(kategori)]
+        # Label UI singkat harus cocok juga dengan nama lengkap di MongoDB.
+        # Gunakan pencocokan case-insensitive tanpa regex agar tanda kurung aman.
+        if "namaKategori" not in frame:
+            frame = frame.iloc[0:0]
+        else:
+            names = frame["namaKategori"].fillna("").astype(str).str.casefold()
+            search = kategori.strip().casefold()
+            frame = frame[names.str.contains(search, regex=False)]
     if "tanggal" not in frame or "nominal" not in frame:
         frame = frame.iloc[0:0]
     else:
@@ -55,6 +62,8 @@ def deteksi_drop_pemasukan(
                 "periodeTerbaru": None,
                 "periodeSebelumnya": None,
                 "jumlahHuriaTurun": 0,
+                "jumlahBelumLapor": 0,
+                "idHuriaBelumLapor": [],
                 "data": [],
             }
             continue
@@ -70,9 +79,17 @@ def deteksi_drop_pemasukan(
         current_values = grouped[grouped["_periode"].eq(latest)].set_index("idHuria")["nominal"]
         previous_values = grouped[grouped["_periode"].eq(previous)].set_index("idHuria")["nominal"]
         rows = []
+        belum_lapor = []
         for id_huria in sorted(set(current_values.index) | set(previous_values.index)):
-            current = float(current_values.get(id_huria, 0))
-            prior = float(previous_values.get(id_huria, 0))
+            if id_huria not in current_values.index:
+                # Tidak ada record bukan berarti pembayaran nol. Jangan buat drop 100%.
+                if id_huria in previous_values.index:
+                    belum_lapor.append(str(id_huria))
+                continue
+            if id_huria not in previous_values.index:
+                continue
+            current = float(current_values[id_huria])
+            prior = float(previous_values[id_huria])
             if prior <= 0 or current >= prior:
                 continue
             drop = prior - current
@@ -90,6 +107,8 @@ def deteksi_drop_pemasukan(
             "periodeTerbaru": _label(latest, current_granularitas),
             "periodeSebelumnya": _label(previous, current_granularitas),
             "jumlahHuriaTurun": len(rows),
+            "jumlahBelumLapor": len(belum_lapor),
+            "idHuriaBelumLapor": belum_lapor,
             "data": rows,
         }
 

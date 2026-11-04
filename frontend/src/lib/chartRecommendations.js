@@ -4,9 +4,10 @@ export const getAvailableChartTypeIds = ({
   chartData = [],
   series = [],
   hasGeographicData = false,
+  isTimeSeries = false,
 }) => {
   const hasCategoricalData = chartData.some((row) => typeof row?.label === 'string' && row.label.length > 0)
-  const hasTimeSeries = chartData.length > 1
+  const hasTimeSeries = isTimeSeries && chartData.length > 1
   const hasMultipleSeries = series.length > 1
   const hasNumericData = chartData.some((row) => {
     if (series.length === 0) return hasNumericValue(row, 'value')

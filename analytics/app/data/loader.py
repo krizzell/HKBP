@@ -190,15 +190,27 @@ def muat_pemasukan(source=None, id_huria=None, mulai=None, akhir=None) -> pd.Dat
     frame = _muat_nested(source, id_huria, "PemasukanJemaat", WILAYAH_COLUMNS + ["idTransaksi", "tanggal", "nominal", "idKategori", "keterangan", "mingguISO"], mulai, akhir)
     if not frame.empty:
         kategori = muat_kategori(source, id_huria)
-        names = kategori.set_index("idKategori")["namaKategori"].to_dict() if not kategori.empty else {}
-        frame["namaKategori"] = frame["idKategori"].map(names).fillna("")
+        names = (kategori.drop_duplicates(["idHuria", "idKategori"])
+                 .set_index(["idHuria", "idKategori"])["namaKategori"].to_dict()) if not kategori.empty else {}
+        frame["namaKategori"] = [names.get((row.idHuria, row.idKategori), "") for row in frame.itertuples()]
     else:
         frame["namaKategori"] = pd.Series(dtype="object")
     return frame
 
 
 def muat_alokasi(source=None, id_huria=None, mulai=None, akhir=None) -> pd.DataFrame:
-    return _muat_nested(source, id_huria, "AlokasiTransaksi", WILAYAH_COLUMNS + ["idAlokasi", "idTransaksi", "peruntukan", "nominal"], mulai, akhir)
+    fields = WILAYAH_COLUMNS + ["idAlokasi", "idTransaksi", "peruntukan", "nominal"]
+    frame = _muat_nested(source, id_huria, "AlokasiTransaksi", fields)
+    if frame.empty or (not mulai and not akhir):
+        return frame
+    pemasukan = muat_pemasukan(source, id_huria)
+    if pemasukan.empty:
+        return frame.iloc[0:0].reset_index(drop=True)
+    dates = pemasukan.set_index(["idHuria", "idTransaksi"])["tanggal"].to_dict()
+    frame["tanggal"] = [dates.get((r.idHuria, r.idTransaksi), pd.NaT) for r in frame.itertuples()]
+    _, start, end = _selected_hurias(source, id_huria, mulai, akhir)
+    return _apply_date_filter(frame, start, end)[fields]
+
 
 
 def muat_setoran(source=None, id_huria=None, mulai=None, akhir=None) -> pd.DataFrame:
@@ -206,7 +218,18 @@ def muat_setoran(source=None, id_huria=None, mulai=None, akhir=None) -> pd.DataF
 
 
 def muat_rincian_setoran(source=None, id_huria=None, mulai=None, akhir=None) -> pd.DataFrame:
-    return _muat_nested(source, id_huria, "RincianSetoranPusat", WILAYAH_COLUMNS + ["idRincian", "idSetoran", "idAlokasi", "nominalDilunasi"], mulai, akhir)
+    fields = WILAYAH_COLUMNS + ["idRincian", "idSetoran", "idAlokasi", "nominalDilunasi"]
+    frame = _muat_nested(source, id_huria, "RincianSetoranPusat", fields)
+    if frame.empty or (not mulai and not akhir):
+        return frame
+    setoran = muat_setoran(source, id_huria)
+    if setoran.empty:
+        return frame.iloc[0:0].reset_index(drop=True)
+    dates = setoran.set_index(["idHuria", "idSetoran"])["tanggalSetor"].to_dict()
+    frame["tanggal"] = [dates.get((r.idHuria, r.idSetoran), pd.NaT) for r in frame.itertuples()]
+    _, start, end = _selected_hurias(source, id_huria, mulai, akhir)
+    return _apply_date_filter(frame, start, end)[fields]
+
 
 
 def muat_kategori(source=None, id_huria=None, mulai=None, akhir=None) -> pd.DataFrame:

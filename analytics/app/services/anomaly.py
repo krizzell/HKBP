@@ -71,14 +71,15 @@ def _rule_r2(alokasi, rincian):
 
 def _rule_r3(alokasi, pemasukan, rincian, batas_hari):
     findings = []
-    paid = set(zip(rincian.get("idHuria", []), rincian.get("idAlokasi", [])))
+    paid = _group_sum(rincian, ["idHuria", "idAlokasi"], "nominalDilunasi")
     transaction_dates = pemasukan.set_index(["idHuria", "idTransaksi"])["tanggal"].to_dict() if not pemasukan.empty else {}
     today = pd.Timestamp.now().normalize()
     for _, row in alokasi.iterrows():
         if str(row.get("peruntukan", "")).casefold() != "setoran pusat":
             continue
         key = (row["idHuria"], row["idAlokasi"])
-        if key in paid:
+        remaining = _number(row.get("nominal")) - _number(paid.get(key, 0))
+        if remaining <= 0:
             continue
         transaction_date = transaction_dates.get((row["idHuria"], row["idTransaksi"]))
         if pd.isna(transaction_date) if transaction_date is not None else True:
@@ -89,7 +90,7 @@ def _rule_r3(alokasi, pemasukan, rincian, batas_hari):
             findings.append(_finding(
                 "R3", severity, row,
                 "Alokasi Setoran Pusat belum dilunasi melewati batas waktu.",
-                {"hariTunggakan": days, "batasHariTunggakan": batas_hari, "nominal": _number(row.get("nominal"))},
+                {"hariTunggakan": days, "batasHariTunggakan": batas_hari, "nominal": _number(row.get("nominal")), "sisaKewajiban": remaining},
                 _date(transaction_date),
             ))
     return findings
@@ -148,11 +149,10 @@ def _rule_s1(alokasi, pemasukan, huria, ambang_z):
     pusat = alokasi[alokasi["peruntukan"].fillna("").str.casefold().eq("setoran pusat")].copy()
     if pusat.empty:
         return [], ["S1 dilewati karena tidak ada alokasi Setoran Pusat."]
-    pusat["bulan"] = pd.to_datetime(pemasukan["tanggal"], errors="coerce").dt.to_period("M") if len(pusat) == len(pemasukan) else pd.NaT
     # Rasio bulanan memakai tanggal transaksi yang dicari berdasarkan IdTransaksi.
     dates = pemasukan.set_index(["idHuria", "idTransaksi"])["tanggal"].to_dict()
     pusat["bulan"] = [pd.Timestamp(dates.get((r.idHuria, r.idTransaksi))).to_period("M") if dates.get((r.idHuria, r.idTransaksi)) is not None else pd.NaT for r in pusat.itertuples()]
-    paid = _group_sum(alokasi.assign(bulan=pusat["bulan"]), ["idHuria", "bulan"], "nominal")
+    paid = _group_sum(pusat, ["idHuria", "bulan"], "nominal")
     # Gunakan total pemasukan sebagai denominator untuk rasio setoran/alokasi.
     revenue = pemasukan.assign(bulan=pemasukan["tanggal"].dt.to_period("M")).groupby(["idHuria", "bulan"])["nominal"].sum()
     ratios = (paid / revenue.replace(0, np.nan)).dropna()
@@ -168,7 +168,9 @@ def _rule_s1(alokasi, pemasukan, huria, ambang_z):
         median = float(peers.median())
         mad = float(np.median(np.abs(peers - median)))
         robust_sd = mad * 1.4826
-        z = 0 if robust_sd == 0 else float((value - median) / robust_sd)
+        # Rasio berbeda hanya karena pembulatan rupiah tidak perlu dianggap anomali.
+        tolerance = 0.005  # 0,5 poin persentase
+        z = 0 if robust_sd < tolerance or abs(value - median) < tolerance else float((value - median) / robust_sd)
         if abs(z) >= ambang_z:
             findings.append({
                 "kode": "S1", "keparahan": "sedang", "idHuria": id_huria,

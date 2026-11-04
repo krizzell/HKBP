@@ -62,8 +62,6 @@ export const ManajemenDataPage = ({ wilayahData = [], onDataUpdated }) => {
         for (const h of res.Huria || []) {
           if (
             (user?.idHuria && h.IdHuria === user?.idHuria) ||
-            (user?.idHuria && h.IdHuria.startsWith(user?.idHuria)) ||
-            (user?.idHuria && user?.idHuria.startsWith(h.IdHuria)) ||
             (user?.namaHuria && h.NamaHuria === user?.namaHuria) ||
             (user?.namaHuria && user?.namaHuria.toLowerCase().includes(h.NamaHuria.toLowerCase())) ||
             (user?.namaHuria && h.NamaHuria.toLowerCase().includes(user?.namaHuria.toLowerCase()))
@@ -73,14 +71,10 @@ export const ManajemenDataPage = ({ wilayahData = [], onDataUpdated }) => {
         }
       }
     }
-    // Fallback ke huria pertama jika belum terpetakan
-    const fallback = distriks[0]?.Resort?.[0]?.Huria?.[0]
-    return fallback
-      ? { ...fallback, huria: fallback.NamaHuria, resort: distriks[0]?.Resort?.[0]?.NamaResort || 'Resort Tebet', distrik: distriks[0]?.NamaDistrik || 'Distrik VIII' }
-      : null
+    return null // Tidak boleh mengelola Huria lain jika akun tidak cocok dengan data
   }, [wilayahData, user])
 
-  const churchId = myHuria?.IdHuria || user?.idHuria || 'H-1.1.1.1'
+  const churchId = myHuria?.IdHuria || user?.idHuria
   const myChurch = myHuria
 
   const showNotify = (type, text) => {
@@ -97,7 +91,7 @@ export const ManajemenDataPage = ({ wilayahData = [], onDataUpdated }) => {
     Nominal: 500000,
     IdKategori: 'K-01',
     Keterangan: 'Pelean Ibadah Minggu',
-    AlokasiPusatPercent: 45,
+    AlokasiPusatPercent: 55,
   })
 
   const resetFormPemasukan = () => {
@@ -107,7 +101,7 @@ export const ManajemenDataPage = ({ wilayahData = [], onDataUpdated }) => {
       Nominal: 500000,
       IdKategori: myChurch?.KategoriPemasukan?.[0]?.IdKategori || 'K-01',
       Keterangan: '',
-      AlokasiPusatPercent: 45,
+      AlokasiPusatPercent: 55,
     })
   }
 
@@ -304,7 +298,8 @@ export const ManajemenDataPage = ({ wilayahData = [], onDataUpdated }) => {
   const [formSetoran, setFormSetoran] = useState({
     Periode: '2026-10',
     TanggalSetor: '2026-10-31',
-    TotalSetoran: 2500000,
+    TotalSetoran: 0,
+    IdAlokasi: '',
     Keterangan: 'Pelunasan setoran pusat bulan Oktober via transfer Bank Mandiri',
   })
 
@@ -313,10 +308,23 @@ export const ManajemenDataPage = ({ wilayahData = [], onDataUpdated }) => {
     setFormSetoran({
       Periode: '2026-10',
       TanggalSetor: new Date().toISOString().substring(0, 10),
-      TotalSetoran: 1000000,
+      TotalSetoran: 0,
+      IdAlokasi: '',
       Keterangan: '',
     })
   }
+
+  // Hitung sisa kewajiban Setoran Pusat untuk tiap alokasi.
+  const unpaidAllocations = useMemo(() => {
+    const payments = new Map()
+    ;(myChurch?.RincianSetoranPusat || []).forEach((item) => {
+      payments.set(item.IdAlokasi, (payments.get(item.IdAlokasi) || 0) + Number(item.NominalDilunasi || 0))
+    })
+    return (myChurch?.AlokasiTransaksi || [])
+      .filter((item) => item.Peruntukan === 'Setoran Pusat')
+      .map((item) => ({ ...item, sisa: Math.max(0, Number(item.Nominal || 0) - (payments.get(item.IdAlokasi) || 0)) }))
+      .filter((item) => item.sisa > 0)
+  }, [myChurch])
 
   const handleSaveSetoran = async (e) => {
     e.preventDefault()
@@ -334,8 +342,13 @@ export const ManajemenDataPage = ({ wilayahData = [], onDataUpdated }) => {
         showNotify('success', `Setoran pusat ${editingSetoranId} berhasil diperbarui`)
         resetFormSetoran()
       } else {
-        await addSetoran(churchId, setoranPayload, [])
-        showNotify('success', 'Setoran pusat berhasil dicatat')
+        const pilihan = unpaidAllocations.find((a) => a.IdAlokasi === formSetoran.IdAlokasi)
+        const nominal = Number(formSetoran.TotalSetoran)
+        if (!pilihan || !Number.isFinite(nominal) || nominal <= 0 || nominal > pilihan.sisa) {
+          throw new Error('Pilih alokasi yang belum lunas dan isi nominal positif yang tidak melebihi sisa kewajiban.')
+        }
+        await addSetoran(churchId, setoranPayload, [{ IdAlokasi: pilihan.IdAlokasi, NominalDilunasi: nominal }])
+        showNotify('success', 'Setoran pusat beserta rincian pelunasan berhasil dicatat')
         resetFormSetoran()
       }
       if (onDataUpdated) onDataUpdated()
@@ -586,6 +599,15 @@ export const ManajemenDataPage = ({ wilayahData = [], onDataUpdated }) => {
         <p className="text-xs text-primary font-bold mt-3">
           Fitur pengaturan ini dikhususkan secara eksklusif untuk <strong>Admin Huria</strong>.
         </p>
+      </div>
+    )
+  }
+
+  if (!myChurch) {
+    return (
+      <div className="p-8 rounded-xl bg-surface border border-line text-center">
+        <h3 className="font-bold text-danger">Data Huria akun belum cocok</h3>
+        <p className="text-sm text-muted mt-2">Periksa idHuria akun dan IdHuria pada MongoDB. Pengelolaan data dinonaktifkan agar tidak mengubah Huria lain.</p>
       </div>
     )
   }
@@ -894,7 +916,7 @@ export const ManajemenDataPage = ({ wilayahData = [], onDataUpdated }) => {
                                     Nominal: pj.Nominal,
                                     IdKategori: pj.IdKategori,
                                     Keterangan: pj.Keterangan || '',
-                                    AlokasiPusatPercent: 45,
+                                    AlokasiPusatPercent: 55,
                                   })
                                 }}
                                 className="p-1.5 rounded-lg text-primary hover:bg-primary-50 transition-colors cursor-pointer"
@@ -1408,6 +1430,26 @@ export const ManajemenDataPage = ({ wilayahData = [], onDataUpdated }) => {
                 />
               </div>
 
+              {!editingSetoranId && (
+                <div>
+                  <label className="block text-xs font-semibold text-muted mb-1.5">Alokasi Setoran Pusat yang Dilunasi *</label>
+                  <select
+                    required
+                    value={formSetoran.IdAlokasi}
+                    onChange={(e) => setFormSetoran({ ...formSetoran, IdAlokasi: e.target.value, TotalSetoran: 0 })}
+                    className="w-full h-10 px-3 rounded-xl border border-line text-sm text-ink bg-surface"
+                  >
+                    <option value="">Pilih alokasi dengan sisa kewajiban</option>
+                    {unpaidAllocations.map((a) => (
+                      <option key={a.IdAlokasi} value={a.IdAlokasi}>
+                        {a.IdTransaksi} · Sisa {formatRupiah(a.sisa)}
+                      </option>
+                    ))}
+                  </select>
+                  {unpaidAllocations.length === 0 && <p className="text-xs text-muted mt-1">Tidak ada alokasi pusat yang belum lunas.</p>}
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-semibold text-muted mb-1.5">
                   Total Nominal Setoran (Rp) <span className="text-danger">*</span>
@@ -1416,8 +1458,9 @@ export const ManajemenDataPage = ({ wilayahData = [], onDataUpdated }) => {
                   type="number"
                   value={formSetoran.TotalSetoran}
                   onChange={(e) => setFormSetoran({ ...formSetoran, TotalSetoran: e.target.value })}
+                  disabled={Boolean(editingSetoranId)}
                   required
-                  min="1000"
+                  min="1"
                   step="1000"
                   className="w-full h-10 px-3 rounded-xl border border-line text-sm font-bold text-ink bg-surface focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-400/30"
                 />

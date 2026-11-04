@@ -19,7 +19,7 @@ import { Button } from '../components/ui'
 
 // Helper pembersih & standarisasi nama kategori penerimaan HKBP
 const cleanCategoryName = (rawName) => {
-  if (!rawName) return 'Pelean Minggu'
+  if (!rawName) return 'Kategori belum diketahui'
   const lower = rawName.toLowerCase()
   if (lower.includes('pelean minggu') || lower.includes('ia, ib')) return 'Pelean Minggu'
   if (lower.includes('guguan') || lower.includes('iuran taon') || lower.includes('iuran')) return 'Iuran Taon (Guguan)'
@@ -34,9 +34,18 @@ const cleanCategoryName = (rawName) => {
 
 export const DashboardPage = ({ wilayahData = [], onNavigateTab }) => {
   const { user } = useAuth()
-  // Mode tampilan tren alokasi 55% & 45%:
-  // 'formula' (Setoran Pusat 55% vs Kas Huria 45% - Default) | 'total' (Total 100% Pemasukan Jemaat)
+  // Mode tampilan tren alokasi:
+  // 'formula' (alokasi pusat vs kas Huria) | 'total' (pemasukan total)
   const [trendMode, setTrendMode] = useState('formula')
+
+  const reportYear = useMemo(() => {
+    const years = (wilayahData[0]?.Pusat?.Distrik || [])
+      .flatMap((d) => d.Resort || []).flatMap((r) => r.Huria || [])
+      .flatMap((h) => h.PemasukanJemaat || [])
+      .map((t) => Number((t.Tanggal || '').slice(0, 4)))
+      .filter((yr) => Number.isInteger(yr) && yr >= 2000 && yr <= 2100)
+    return years.length ? Math.max(...years) : new Date().getFullYear()
+  }, [wilayahData])
 
   // Agregasi Konsolidasi Seluruh HKBP (Tanpa Filter Wilayah / Lingkup)
   const {
@@ -57,7 +66,7 @@ export const DashboardPage = ({ wilayahData = [], onNavigateTab }) => {
     const catMap = {}
     const txList = []
 
-    // 12 Bulan Tahun Anggaran 2026
+    // 12 bulan tahun laporan yang dipilih dari data terbaru
     const mNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
     const mData = mNames.map((lbl, idx) => ({
       key: String(idx + 1).padStart(2, '0'),
@@ -101,6 +110,7 @@ export const DashboardPage = ({ wilayahData = [], onNavigateTab }) => {
 
           // Pemasukan Jemaat
           ;(h.PemasukanJemaat || []).forEach((pj) => {
+            if (!pj.Tanggal?.startsWith(`${reportYear}-`)) return
             const nominal = pj.Nominal || 0
             let pjKas = 0
             let pjPusat = 0
@@ -118,8 +128,8 @@ export const DashboardPage = ({ wilayahData = [], onNavigateTab }) => {
             kas += pjKas
             pusat += pjPusat
 
-            // Distribusi Bulanan 2026
-            if (pj.Tanggal && pj.Tanggal.startsWith('2026-')) {
+            // Distribusi bulanan pada tahun laporan
+            if (pj.Tanggal && pj.Tanggal.startsWith(`${reportYear}-`)) {
               const mIdx = parseInt(pj.Tanggal.substring(5, 7), 10) - 1
               if (mIdx >= 0 && mIdx < 12) {
                 mData[mIdx].pemasukan += nominal
@@ -146,6 +156,7 @@ export const DashboardPage = ({ wilayahData = [], onNavigateTab }) => {
 
           // Kehadiran Sesi Ibadah
           ;(h.SesiIbadah || []).forEach((s) => {
+            if (!s.Tanggal?.startsWith(`${reportYear}-`)) return
             hadir += s.JumlahHadir || 0
           })
         })
@@ -188,7 +199,7 @@ export const DashboardPage = ({ wilayahData = [], onNavigateTab }) => {
       recentTransactions: txList.slice(0, 8),
       peakMonth: peak,
     }
-  }, [wilayahData, user])
+  }, [wilayahData, user, reportYear])
 
   // Konfigurasi seri garis kurva berdasarkan mode aktif
   const currentSeries = useMemo(() => {
@@ -201,16 +212,16 @@ export const DashboardPage = ({ wilayahData = [], onNavigateTab }) => {
         },
       ]
     }
-    // Default 'formula': Komparasi Setoran Pusat (55%) vs Kas Huria (45%)
+    // Default 'formula': Komparasi Alokasi ke Pusat vs Kas Huria
     return [
       {
         key: 'pusat',
-        label: 'Setoran Pusat (55% · Sentralisasi)',
+        label: 'Alokasi ke Pusat (Realisasi)',
         color: '#6366f1', // Indigo
       },
       {
         key: 'kas',
-        label: 'Kas Huria (45% · Otonomi Lokal)',
+        label: 'Alokasi Kas Huria (Realisasi)',
         color: '#10b981', // Emerald Green
       },
     ]
@@ -224,20 +235,20 @@ export const DashboardPage = ({ wilayahData = [], onNavigateTab }) => {
     const scopeLabel = isAdmin ? `HURIA ${user?.namaHuria?.toUpperCase() || ''}` : 'KONSOLIDASI SELURUH HKBP'
 
     lines.push(escapeCSV(`LAPORAN RINGKASAN EKSEKUTIF DASHBOARD HKBP (${scopeLabel})`))
-    lines.push(`${escapeCSV('Tahun Anggaran')},${escapeCSV(isAdmin ? `2026 (${user?.namaHuria || 'Huria'})` : '2026 (Konsolidasi Seluruh HKBP)')}`)
+    lines.push(`${escapeCSV('Tahun Anggaran')},${escapeCSV(isAdmin ? `${reportYear} (${user?.namaHuria || 'Huria'})` : `${reportYear} (Konsolidasi Seluruh HKBP)`)}`)
     lines.push(`${escapeCSV('Waktu Ekspor')},${escapeCSV(new Date().toLocaleString('id-ID'))}`)
     lines.push('')
 
     lines.push(escapeCSV('RINGKASAN FORMULA ALOKASI SENTRALISASI & OTONOMI'))
     lines.push(`${escapeCSV('Indikator')},${escapeCSV('Nominal (Rp)')},${escapeCSV('Persentase')},${escapeCSV('Peruntukan')}`)
     lines.push(`${escapeCSV('Total Pemasukan Jemaat')},${totalPemasukan},${escapeCSV('100%')},${escapeCSV('Total Penerimaan Kas Masuk')}`)
-    lines.push(`${escapeCSV('Kewajiban Setoran Pusat')},${totalSetoranPusat},${escapeCSV('55%')},${escapeCSV('Sentralisasi Pearaja & Dana Pensiun')}`)
-    lines.push(`${escapeCSV('Alokasi Kas Huria')},${totalKasHuria},${escapeCSV('45%')},${escapeCSV('Otonomi Pelayanan Huria Lokal')}`)
+    lines.push(`${escapeCSV('Alokasi ke Pusat')},${totalSetoranPusat},${escapeCSV('Sesuai transaksi')},${escapeCSV('Kewajiban alokasi (bukan bukti pembayaran)')}`)
+    lines.push(`${escapeCSV('Alokasi Kas Huria')},${totalKasHuria},${escapeCSV('Sesuai transaksi')},${escapeCSV('Alokasi kas lokal')}`)
     lines.push(`${escapeCSV('Total Kehadiran Ibadah')},${totalHadir},${escapeCSV('-')},${escapeCSV(new Intl.NumberFormat('id-ID').format(totalHadir) + ' Jiwa')}`)
     lines.push('')
 
-    lines.push(escapeCSV('TREN BULANAN FORMULA ALOKASI 55% DAN 45% (2026)'))
-    lines.push(`${escapeCSV('Bulan')},${escapeCSV('Total Pemasukan')},${escapeCSV('Setoran Pusat (55%)')},${escapeCSV('Kas Huria (45%)')},${escapeCSV('Selisih Sentralisasi (+10%)')}`)
+    lines.push(escapeCSV('TREN BULANAN FORMULA ALOKASI PUSAT DAN KAS HURIA'))
+    lines.push(`${escapeCSV('Bulan')},${escapeCSV('Total Pemasukan')},${escapeCSV('Alokasi ke Pusat')},${escapeCSV('Kas Huria')},${escapeCSV('Selisih Sentralisasi (+10%)')}`)
     trendData.forEach((t) => {
       lines.push(`${escapeCSV(t.label)},${t.pemasukan},${t.pusat},${t.kas},${t.pusat - t.kas}`)
     })
@@ -267,7 +278,7 @@ export const DashboardPage = ({ wilayahData = [], onNavigateTab }) => {
         <div>
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <span className="text-xs font-bold text-muted tracking-wider uppercase">
-              {isAdmin ? `HKBP · Dashboard Keuangan Huria` : 'HKBP · Ikhtisar Keuangan 2026'}
+              {isAdmin ? `HKBP · Dashboard Keuangan Huria` : `HKBP · Ikhtisar Keuangan ${reportYear}`}
             </span>
             {isAdmin && (
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
@@ -280,8 +291,8 @@ export const DashboardPage = ({ wilayahData = [], onNavigateTab }) => {
           </h1>
           <p className="text-xs sm:text-sm text-muted mt-1">
             {isAdmin
-              ? `Realisasi penerimaan kas jemaat, formula sentralisasi 55% dan 45%, serta kehadiran ibadah di ${user?.namaHuria || 'gereja Anda'}.`
-              : 'Konsolidasi menyeluruh realisasi penerimaan kas jemaat, formula sentralisasi 55% dan 45%, serta kehadiran ibadah.'}
+              ? `Realisasi penerimaan kas jemaat, pembagian alokasi ke pusat dan kas Huria, serta kehadiran ibadah di ${user?.namaHuria || 'gereja Anda'}.`
+              : 'Konsolidasi menyeluruh realisasi penerimaan kas jemaat, pembagian alokasi ke pusat dan kas Huria, serta kehadiran ibadah.'}
           </p>
         </div>
 
@@ -318,17 +329,17 @@ export const DashboardPage = ({ wilayahData = [], onNavigateTab }) => {
                 100% Realisasi
               </span>
               <span className="text-xs text-white/60">
-                Tahun Anggaran 2026
+                Tahun Anggaran {reportYear}
               </span>
             </div>
           </div>
         </div>
 
-        {/* KPI 2: Setoran Pusat (55%) */}
+        {/* KPI 2: Alokasi ke Pusat */}
         <div className="bg-surface border border-line rounded-2xl p-5 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs text-muted font-medium">
-              Kewajiban Setoran Pusat (55%)
+              Kewajiban Alokasi ke Pusat
             </span>
             <div className="w-9 h-9 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
               <Send className="w-4 h-4" />
@@ -350,11 +361,11 @@ export const DashboardPage = ({ wilayahData = [], onNavigateTab }) => {
           </div>
         </div>
 
-        {/* KPI 3: Kas Huria (45%) */}
+        {/* KPI 3: Kas Huria */}
         <div className="bg-surface border border-line rounded-2xl p-5 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs text-muted font-medium">
-              Alokasi Kas Huria (45%)
+              Alokasi Kas Huria
             </span>
             <div className="w-9 h-9 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
               <Building2 className="w-4 h-4" />
@@ -397,14 +408,14 @@ export const DashboardPage = ({ wilayahData = [], onNavigateTab }) => {
                 Akumulasi
               </span>
               <span className="text-xs text-muted">
-                Sesi Ibadah 2026
+                Sesi Ibadah {reportYear}
               </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 3. HERO SECTION: 1 TREN FORMULA ALOKASI 55% & 45% (Left 2 cols) + PERINGKAT KATEGORI (Right 1 col) */}
+      {/* Tren alokasi aktual dan peringkat kategori */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
         {/* HERO 1 TREN UTAMA: FORMULA ALOKASI SENTRALISASI VS OTONOMI LOKAL */}
         <div className="lg:col-span-2 bg-surface border border-line rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col justify-between">
@@ -418,10 +429,10 @@ export const DashboardPage = ({ wilayahData = [], onNavigateTab }) => {
                 </span>
               </div>
               <h3 className="text-base sm:text-lg font-extrabold text-ink tracking-tight">
-                Tren Formula Alokasi 55% dan 45% (Sentralisasi vs Otonomi Lokal)
+                Tren Alokasi Pusat dan Kas Huria
               </h3>
               <p className="text-xs text-muted mt-0.5">
-                Dinamika perolehan bulanan antara Setoran Kantor Pusat HKBP (55% Sentralisasi) dan Kas Huria (45% Otonomi Lokal).
+                Perbandingan alokasi kewajiban ke pusat dan kas Huria sesuai data transaksi.
               </p>
             </div>
 
@@ -436,7 +447,7 @@ export const DashboardPage = ({ wilayahData = [], onNavigateTab }) => {
                     : 'text-muted hover:text-ink'
                 }`}
               >
-                Formula 55% vs 45%
+                Alokasi transaksi
               </button>
               <button
                 type="button"
@@ -457,7 +468,7 @@ export const DashboardPage = ({ wilayahData = [], onNavigateTab }) => {
             <div className="flex flex-col">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-indigo-500" />
-                <span className="text-[11px] font-semibold text-muted">Setoran Pusat (55%)</span>
+                <span className="text-[11px] font-semibold text-muted">Alokasi ke Pusat</span>
               </div>
               <span className="text-sm sm:text-base font-extrabold text-indigo-600 mt-0.5">
                 {formatCompactRupiah(totalSetoranPusat)}
@@ -468,7 +479,7 @@ export const DashboardPage = ({ wilayahData = [], onNavigateTab }) => {
             <div className="flex flex-col border-l border-line pl-3">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span className="text-[11px] font-semibold text-muted">Kas Huria (45%)</span>
+                <span className="text-[11px] font-semibold text-muted">Kas Huria</span>
               </div>
               <span className="text-sm sm:text-base font-extrabold text-emerald-600 mt-0.5">
                 {formatCompactRupiah(totalKasHuria)}
@@ -518,7 +529,7 @@ export const DashboardPage = ({ wilayahData = [], onNavigateTab }) => {
               Peringkat Kategori Pemasukan
             </h3>
             <p className="text-xs text-muted mt-0.5">
-              Distribusi penerimaan berdasarkan pos anggaran HKBP 2026.
+              Distribusi penerimaan berdasarkan pos anggaran HKBP {reportYear}.
             </p>
           </div>
 

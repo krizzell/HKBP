@@ -67,6 +67,7 @@ type RincianSetoranPusat struct {
 }
 
 type Huria struct {
+	Versi               int64                 `bson:"Versi,omitempty" json:"Versi,omitempty"`
 	NamaHuria           string                `bson:"NamaHuria" json:"NamaHuria"`
 	IdHuria             string                `bson:"IdHuria" json:"IdHuria"`
 	LokasiHuria         string                `bson:"LokasiHuria" json:"LokasiHuria"`

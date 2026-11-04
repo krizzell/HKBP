@@ -50,6 +50,16 @@ import { OrganisasiFilterBar } from '../components/OrganisasiFilterBar'
 import { PeriodeFilter } from '../components/PeriodeFilter'
 import { PythonAnalyticsPanel } from '../components/PythonAnalyticsPanel'
 
+const CHART_PALETTE = [
+    'var(--color-chart-1)',
+    'var(--color-chart-2)',
+    'var(--color-chart-3)',
+    'var(--color-chart-4)',
+    'var(--color-chart-5)',
+    'var(--color-chart-6)',
+  ]
+
+
 // Metadata Sumber Data & Kategori untuk display dan ekspor CSV
 const DATA_SOURCE_META = {
   'pemasukan': { sumber: 'Pemasukan Jemaat', kategori: 'Semua Kategori Pemasukan', unit: 'Rp' },
@@ -254,16 +264,6 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
     )
   }
 
-  // Colors Palette
-  const palette = [
-    'var(--color-chart-1)',
-    'var(--color-chart-2)',
-    'var(--color-chart-3)',
-    'var(--color-chart-4)',
-    'var(--color-chart-5)',
-    'var(--color-chart-6)',
-  ]
-
   // Flatten Hierarki Wilayah (Pusat -> Distrik -> Resort -> Huria)
   const distriks = useMemo(() => wilayahData[0]?.Pusat?.Distrik || [], [wilayahData])
 
@@ -336,7 +336,7 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
           name: huriaName,
           hurias: matchedHurias.length > 0 ? matchedHurias : allHurias.slice(0, 1),
           churches: matchedHurias.length > 0 ? matchedHurias : allHurias.slice(0, 1),
-          color: palette[0],
+          color: CHART_PALETTE[0],
         },
       ]
     }
@@ -365,12 +365,12 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
           name: item.nama,
           hurias: matchedHurias,
           churches: matchedHurias,
-          color: palette[idx % palette.length],
+          color: CHART_PALETTE[idx % CHART_PALETTE.length],
         }
       })
     }
     return []
-  }, [isAdmin, user, allHurias, allResorts, allDistriks, palette, organisasiFilter.items, organisasiFilter.level])
+  }, [isAdmin, user, allHurias, allResorts, allDistriks, organisasiFilter.items, organisasiFilter.level])
 
   // 3. Helper Cek Tanggal Sesuai Filter Waktu Aktif (Tahun, Bulan, Minggu)
   const isDateInFilter = (dateStr) => {
@@ -579,7 +579,7 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
 
       // Bangun baris chart
       const rows = Array.from(dimMap.entries()).map(([slotKey, slotData]) => {
-        const row = { key: slotKey, label: slotData.label }
+        const row = { key: slotKey, label: slotData.label, __observations: { ...slotData.counts } }
 
         comparedEntities.forEach((ent) => {
           const entSum = slotData.sums[ent.id] || 0
@@ -598,7 +598,7 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
 
           const s = stats[ent.id]
           if (s) {
-            s.total += val
+            s.total += metric === 'AVG' ? entSum : val
             s.count += entCount
             if (val > s.peakVal) {
               s.peakVal = val
@@ -614,8 +614,22 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
         return row
       })
 
+      // Rata-rata gabungan wajib dibobot menurut jumlah observasi,
+      // bukan penjumlahan rata-rata tiap bulan.
+      if (metric === 'AVG') {
+        let rawSum = 0
+        let rawCount = 0
+        comparedEntities.forEach((ent) => {
+          const stat = stats[ent.id]
+          rawSum += stat.total
+          rawCount += stat.count
+          stat.total = stat.count ? Math.round(stat.total / stat.count) : 0
+        })
+        overallSum = rawCount ? Math.round(rawSum / rawCount) : 0
+      }
+      const observationCount = Object.values(stats).reduce((sum, stat) => sum + stat.count, 0)
       return {
-        chartData: rows,
+        chartData: observationCount > 0 ? rows : [],
         series: sList,
         entityStats: stats,
         totalOverall: overallSum,
@@ -644,6 +658,7 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
         chartData,
         series,
         hasGeographicData: false,
+        isTimeSeries: true,
       }),
     [chartData, series],
   )
@@ -673,7 +688,7 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
       if (tableSortField === 'name') {
         diff = a.name.localeCompare(b.name, 'id', { numeric: true })
       } else if (tableSortField === 'level') {
-        diff = String(comparisonLevel).localeCompare(String(comparisonLevel))
+        diff = a.name.localeCompare(b.name, 'id', { numeric: true })
       } else if (tableSortField === 'total') {
         diff = statA.total - statB.total
       } else if (tableSortField === 'avg') {
@@ -923,6 +938,7 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
             <PythonAnalyticsPanel
               idHuria={analyticsHuriaIds}
               kategori={dataSource.startsWith('pemasukan::') ? dataSource.split('::')[1] : undefined}
+              periode={organisasiFilter.periode}
             />
           )}
           {/* 3. VISUALIZATION CANVAS & METRICS ATAU EMPTY STATE */}

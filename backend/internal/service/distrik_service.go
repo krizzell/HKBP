@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -78,16 +79,10 @@ func (s *distrikService) Create(ctx context.Context, req domain.CreateDistrikReq
 		return nil, err
 	}
 	if s.wilayahRepo != nil {
-		_ = s.wilayahRepo.SyncTree(ctx)
-	}
-	return doc, nil
-	if false {
-		if mongo.IsDuplicateKeyError(err) {
-			return nil, domain.ErrDistrikNamaDup
+		if err := s.wilayahRepo.SyncTree(ctx); err != nil {
+			return nil, fmt.Errorf("master tersimpan, tetapi sinkronisasi hierarki gagal (refresh sebelum mengulang): %w", err)
 		}
-		return nil, err
 	}
-
 	return doc, nil
 }
 
@@ -194,9 +189,10 @@ func (s *distrikService) Update(ctx context.Context, id string, req domain.Updat
 		return nil, err
 	}
 	if s.wilayahRepo != nil {
-		_ = s.wilayahRepo.SyncTree(ctx)
+		if err := s.wilayahRepo.SyncTree(ctx); err != nil {
+			return nil, fmt.Errorf("master terbarui, tetapi sinkronisasi hierarki gagal: %w", err)
+		}
 	}
-
 	return existing, nil
 }
 
@@ -236,7 +232,9 @@ func (s *distrikService) Delete(ctx context.Context, id string) error {
 		return err
 	}
 	if s.wilayahRepo != nil {
-		_ = s.wilayahRepo.SyncTree(ctx)
+		if err := s.wilayahRepo.SyncTree(ctx); err != nil {
+			return fmt.Errorf("master terhapus, tetapi sinkronisasi hierarki gagal: %w", err)
+		}
 	}
 	return nil
 }

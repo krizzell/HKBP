@@ -248,6 +248,7 @@ function MainApp() {
         {/* Top Navbar */}
         <Navbar
           onRefreshData={fetchData}
+          wilayahData={wilayahData}
           activeTabTitle={tabTitles[activeTab] || 'Dashboard'}
           onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)}
         />

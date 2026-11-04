@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { resetSeeder } from '../api/wilayahApi'
 import {
   Menu,
   Search,
@@ -12,31 +11,29 @@ import {
   ChevronDown,
 } from 'lucide-react'
 
-export const Navbar = ({ onRefreshData, activeTabTitle = 'Dashboard', onOpenMobileSidebar }) => {
+export const Navbar = ({ onRefreshData, wilayahData = [], activeTabTitle = 'Dashboard', onOpenMobileSidebar }) => {
   const { user, logout, isSuperAdmin } = useAuth()
   const [resetting, setResetting] = useState(false)
   const [message, setMessage] = useState(null)
   const [showUserDropdown, setShowUserDropdown] = useState(false)
 
-  const handleReset = async () => {
-    if (!window.confirm('Reset database dan muat ulang seeder data keuangan 2026 untuk seluruh gereja?')) return
+  const handleRefresh = async () => {
     setResetting(true)
     try {
-      await resetSeeder()
-      setMessage({ type: 'success', text: 'Seeder 2026 berhasil dimuat ulang!' })
-      if (onRefreshData) onRefreshData()
-      setTimeout(() => setMessage(null), 4000)
+      await onRefreshData?.()
+      setMessage({ type: 'success', text: 'Data wilayah diperbarui.' })
     } catch {
-      setMessage({ type: 'error', text: 'Gagal mereset seeder' })
-      setTimeout(() => setMessage(null), 4000)
+      setMessage({ type: 'error', text: 'Gagal memperbarui data.' })
     } finally {
       setResetting(false)
+      setTimeout(() => setMessage(null), 4000)
     }
   }
 
   // Active scope text
+  const huriaCount = (wilayahData[0]?.Pusat?.Distrik || []).reduce((sum, d) => sum + (d.Resort || []).reduce((n, r) => n + (r.Huria || []).length, 0), 0)
   const scopeChipText = isSuperAdmin
-    ? 'PUSAT · 8 Huria'
+    ? `PUSAT · ${huriaCount} Huria`
     : `${user?.namaHuria || 'Huria'} · ${user?.namaDistrik || 'Distrik'}`
 
   return (
@@ -100,17 +97,17 @@ export const Navbar = ({ onRefreshData, activeTabTitle = 'Dashboard', onOpenMobi
           <span className="absolute top-2 right-2.5 w-1.5 h-1.5 rounded-full bg-primary" />
         </button>
 
-        {/* Reset Seeder Button (SuperAdmin / Dev) */}
+        {/* Refresh data aman: tidak menghapus atau membangkitkan ulang seeder */}
         <button
-          onClick={handleReset}
+          onClick={handleRefresh}
           disabled={resetting}
           className="h-9 px-3.5 rounded-full border border-line bg-surface text-ink text-xs font-semibold hover:bg-primary-50 hover:text-primary transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Muat ulang data sampel 2026"
+          title="Muat ulang data dari MongoDB tanpa mengubahnya"
         >
           <RefreshCw
             className={`w-3.5 h-3.5 text-muted ${resetting ? 'animate-spin' : ''}`}
           />
-          <span className="hidden lg:inline">{resetting ? 'Mereset...' : 'Reset Seeder'}</span>
+          <span className="hidden lg:inline">{resetting ? 'Memuat...' : 'Refresh Data'}</span>
         </button>
 
         {/* Scope / Role Chip ("PUSAT · 8 Huria") */}
