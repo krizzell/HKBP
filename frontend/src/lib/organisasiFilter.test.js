@@ -317,7 +317,9 @@ describe('organisasiFilter - toQuery & fromQuery', () => {
     const restored = fromQuery(q)
 
     expect(restored.selected).toEqual(originalState.selected)
-    expect(restored.periode).toEqual(originalState.periode)
+    expect(restored.periode).toMatchObject(originalState.periode)
+    expect(restored.periode.bulanAwal).toBe('2026-05')
+    expect(restored.periode.bulanAkhir).toBe('2026-05')
   })
 })
 

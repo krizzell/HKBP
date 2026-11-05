@@ -172,19 +172,8 @@ func (s *resortService) Update(ctx context.Context, id string, req domain.Update
 		}
 
 		if newDistrikID != existing.IdDistrik {
-			parentDistrik, err := s.distrikRepo.FindByID(ctx, newDistrikID)
-			if err != nil {
-				if errors.Is(err, domain.ErrDistrikNotFound) {
-					return nil, domain.ErrResortParentNotFnd
-				}
-				return nil, err
-			}
-			if !parentDistrik.Aktif {
-				return nil, domain.ErrResortParentInact
-			}
-
-			targetDistrikID = newDistrikID
-			distrikChanged = true
+			// Pemindahan induk belum boleh menyalin Resort atau transaksi historis.
+			return nil, errors.New("pemindahan Resort ke Distrik lain belum diaktifkan demi menjaga data keuangan; data lama tidak diubah")
 		}
 	}
 
@@ -274,7 +263,7 @@ func (s *resortService) Delete(ctx context.Context, id string) error {
 	}
 
 	// 1. Pastikan resort ada
-	_, err = s.repo.FindByID(ctx, objID)
+	doc, err := s.repo.FindByID(ctx, objID)
 	if err != nil {
 		return err
 	}
@@ -297,13 +286,15 @@ func (s *resortService) Delete(ctx context.Context, id string) error {
 		return domain.ErrResortHasHuria
 	}
 
-	// 4. Hapus permanen jika tidak memiliki anak sama sekali
-	if err := s.repo.Delete(ctx, objID); err != nil {
+	// 4. Arsipkan jika tidak memiliki anak sama sekali
+	doc.Aktif = false
+	doc.DiubahPada = time.Now().UTC()
+	if err := s.repo.Update(ctx, objID, doc); err != nil {
 		return err
 	}
 	if s.wilayahRepo != nil {
 		if err := s.wilayahRepo.SyncTree(ctx); err != nil {
-			return fmt.Errorf("master terhapus, tetapi sinkronisasi hierarki gagal: %w", err)
+			return fmt.Errorf("master diarsipkan, tetapi sinkronisasi hierarki gagal: %w", err)
 		}
 	}
 	return nil

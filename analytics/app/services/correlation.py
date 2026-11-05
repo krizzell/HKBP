@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pandas as pd
 
+from app.services.category_match import filter_kategori
+
 
 _GRANULARITAS = {"mingguan": "W-SUN", "bulanan": "M"}
 
@@ -35,8 +37,7 @@ def analisis_korelasi(
 
     attendance = sesi.copy()
     income = pemasukan.copy()
-    if kategori:
-        income = income[income["namaKategori"].fillna("").eq(kategori)]
+    income = filter_kategori(income, kategori)
 
     for frame in (attendance, income):
         if "tanggal" in frame:

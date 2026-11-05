@@ -32,6 +32,8 @@ export function TabAlokasi({ church }) {
             Sebagian
           </span>
         )
+      case 'tidak_diketahui':
+        return <span className="text-xs text-muted">Belum terverifikasi</span>
       case 'belum':
       default:
         return (
@@ -68,7 +70,7 @@ export function TabAlokasi({ church }) {
               </div>
             </div>
             <div className="text-2xl font-extrabold text-primary tabular-nums">
-              {formatPercent(alokasiPersentase.pusatPersen, 0)}
+              {alokasiPersentase.pusatPersen == null ? '—' : formatPercent(alokasiPersentase.pusatPersen, 0)}
             </div>
           </div>
 
@@ -84,7 +86,7 @@ export function TabAlokasi({ church }) {
               </div>
             </div>
             <div className="text-2xl font-extrabold text-success tabular-nums">
-              {formatPercent(alokasiPersentase.huriaPersen, 0)}
+              {alokasiPersentase.huriaPersen == null ? '—' : formatPercent(alokasiPersentase.huriaPersen, 0)}
             </div>
           </div>
         </div>

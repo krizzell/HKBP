@@ -79,6 +79,7 @@ export function extractOptionsFromWilayahData(wilayahData) {
   const resHuria = []
 
   distriks.forEach((d) => {
+    if (d.Aktif === false) return
     const dId = d.IdDistrik || d.NamaDistrik
     resDistrik.push({
       id: dId,
@@ -87,6 +88,7 @@ export function extractOptionsFromWilayahData(wilayahData) {
     })
 
     ;(d.Resort || []).forEach((r) => {
+      if (r.Aktif === false) return
       const rId = r.IdResort || `${dId}::${r.NamaResort}`
       resResort.push({
         id: rId,
@@ -97,6 +99,7 @@ export function extractOptionsFromWilayahData(wilayahData) {
       })
 
       ;(r.Huria || []).forEach((h) => {
+        if (h.Aktif === false) return
         const hId = h.IdHuria || `${rId}::${h.NamaHuria}`
         let hTotal = 0
         ;(h.PemasukanJemaat || []).forEach((p) => {
@@ -171,7 +174,10 @@ export async function getOrganisasiOptions({
     // Backend endpoint belum siap / 404, fallback ke MOCK_ORGANISASI_DATA
   }
 
-  // 3. Fallback menggunakan MOCK_ORGANISASI_DATA
+  // Hindari opsi organisasi palsu jika API/database belum siap.
+  if (import.meta.env.VITE_ENABLE_MOCK_WILAYAH !== 'true') return { data: [] }
+
+  // 3. Fallback menggunakan MOCK_ORGANISASI_DATA hanya ketika mode demo aktif.
   const allForLevel = MOCK_ORGANISASI_DATA[level] || []
   let filtered = allForLevel
 

@@ -45,6 +45,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { formatRupiah, formatDate } from '../utils/formatters'
+import { todayLocal } from '../lib/periodeRange'
 import { Button } from '../components/ui'
 
 export const ManajemenDataPage = ({ wilayahData = [], onDataUpdated }) => {
@@ -87,7 +88,7 @@ export const ManajemenDataPage = ({ wilayahData = [], onDataUpdated }) => {
   // =========================================================================
   const [editingTrxId, setEditingTrxId] = useState(null)
   const [formPemasukan, setFormPemasukan] = useState({
-    Tanggal: '2026-10-18',
+    Tanggal: todayLocal(),
     Nominal: 500000,
     IdKategori: 'K-01',
     Keterangan: 'Pelean Ibadah Minggu',
@@ -97,7 +98,7 @@ export const ManajemenDataPage = ({ wilayahData = [], onDataUpdated }) => {
   const resetFormPemasukan = () => {
     setEditingTrxId(null)
     setFormPemasukan({
-      Tanggal: new Date().toISOString().substring(0, 10),
+      Tanggal: todayLocal(),
       Nominal: 500000,
       IdKategori: myChurch?.KategoriPemasukan?.[0]?.IdKategori || 'K-01',
       Keterangan: '',
@@ -158,7 +159,7 @@ export const ManajemenDataPage = ({ wilayahData = [], onDataUpdated }) => {
   const [editingSesiId, setEditingSesiId] = useState(null)
   const [formSesi, setFormSesi] = useState({
     NamaSesi: 'Ibadah Minggu Pagi (Bahasa Batak)',
-    Tanggal: '2026-10-18',
+    Tanggal: todayLocal(),
     JamMulai: '08:00',
     JumlahHadir: 150,
     p1a: 1200000,
@@ -171,7 +172,7 @@ export const ManajemenDataPage = ({ wilayahData = [], onDataUpdated }) => {
     setEditingSesiId(null)
     setFormSesi({
       NamaSesi: 'Ibadah Minggu Pagi',
-      Tanggal: new Date().toISOString().substring(0, 10),
+      Tanggal: todayLocal(),
       JamMulai: '08:00',
       JumlahHadir: 100,
       p1a: 0,
@@ -296,8 +297,8 @@ export const ManajemenDataPage = ({ wilayahData = [], onDataUpdated }) => {
   // =========================================================================
   const [editingSetoranId, setEditingSetoranId] = useState(null)
   const [formSetoran, setFormSetoran] = useState({
-    Periode: '2026-10',
-    TanggalSetor: '2026-10-31',
+    Periode: todayLocal().slice(0, 7),
+    TanggalSetor: todayLocal(),
     TotalSetoran: 0,
     IdAlokasi: '',
     Keterangan: 'Pelunasan setoran pusat bulan Oktober via transfer Bank Mandiri',
@@ -306,8 +307,8 @@ export const ManajemenDataPage = ({ wilayahData = [], onDataUpdated }) => {
   const resetFormSetoran = () => {
     setEditingSetoranId(null)
     setFormSetoran({
-      Periode: '2026-10',
-      TanggalSetor: new Date().toISOString().substring(0, 10),
+      Periode: todayLocal().slice(0, 7),
+      TanggalSetor: todayLocal(),
       TotalSetoran: 0,
       IdAlokasi: '',
       Keterangan: '',
@@ -1547,7 +1548,7 @@ export const ManajemenDataPage = ({ wilayahData = [], onDataUpdated }) => {
                                 onClick={() => {
                                   setEditingSetoranId(sp.IdSetoran)
                                   setFormSetoran({
-                                    Periode: sp.Periode || '2026-10',
+                                    Periode: sp.Periode || todayLocal().slice(0, 7),
                                     TanggalSetor: sp.TanggalSetor || new Date().toISOString().substring(0, 10),
                                     TotalSetoran: sp.TotalSetoran || 0,
                                     Keterangan: sp.Keterangan || '',

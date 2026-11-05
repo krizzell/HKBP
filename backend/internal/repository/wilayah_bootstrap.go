@@ -17,6 +17,17 @@ import (
 // pada dokumen HKBP tidak disentuh. Ini BUKAN migrasi data finansial.
 func BootstrapMasterFromTree(ctx context.Context, db *mongo.Database) error {
 	dCol, rCol, hCol := db.Collection("distrik"), db.Collection("resort"), db.Collection("huria")
+	// Inisialisasi hanya ketika semua collection master kosong. Jangan hidupkan kembali
+	// entitas yang telah dihapus/diarsipkan pada startup berikutnya.
+	for _, col := range []*mongo.Collection{dCol, rCol, hCol} {
+		count, countErr := col.CountDocuments(ctx, bson.M{})
+		if countErr != nil {
+			return countErr
+		}
+		if count > 0 {
+			return nil
+		}
+	}
 	var roots []domain.Wilayah
 	cur, err := db.Collection("HKBP").Find(ctx, bson.M{})
 	if err != nil {

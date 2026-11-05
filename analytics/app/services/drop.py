@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pandas as pd
 
+from app.services.category_match import filter_kategori
+
 
 _GRANULARITAS = {
     "mingguan": "W-SUN",
@@ -27,21 +29,14 @@ def deteksi_drop_pemasukan(
     *,
     granularitas: str = "semua",
     kategori: str | None = None,
+    akhir_terpilih: str | None = None,
 ) -> dict:
     granularitas_valid = ("mingguan", "bulanan", "tahunan")
     if granularitas != "semua" and granularitas not in granularitas_valid:
         raise ValueError("granularitas harus berupa semua, mingguan, bulanan, atau tahunan")
 
     frame = pemasukan.copy()
-    if kategori:
-        # Label UI singkat harus cocok juga dengan nama lengkap di MongoDB.
-        # Gunakan pencocokan case-insensitive tanpa regex agar tanda kurung aman.
-        if "namaKategori" not in frame:
-            frame = frame.iloc[0:0]
-        else:
-            names = frame["namaKategori"].fillna("").astype(str).str.casefold()
-            search = kategori.strip().casefold()
-            frame = frame[names.str.contains(search, regex=False)]
+    frame = filter_kategori(frame, kategori)
     if "tanggal" not in frame or "nominal" not in frame:
         frame = frame.iloc[0:0]
     else:
@@ -69,7 +64,12 @@ def deteksi_drop_pemasukan(
             continue
 
         periods = frame["tanggal"].dt.to_period(_GRANULARITAS[current_granularitas])
-        latest = periods.max()
+        # Gunakan akhir rentang yang dipilih UI, bukan otomatis laporan terakhir.
+        # Jika akhir itu belum memiliki laporan, jangan mundur diam-diam ke periode lain.
+        if akhir_terpilih:
+            latest = pd.Period(pd.Timestamp(akhir_terpilih), freq=_GRANULARITAS[current_granularitas])
+        else:
+            latest = periods.max()
         previous = latest - 1
         grouped = (
             frame.assign(_periode=periods)
@@ -103,7 +103,7 @@ def deteksi_drop_pemasukan(
             })
         rows.sort(key=lambda row: (-row["persentaseDrop"], -row["selisih"], row["namaHuria"]))
         results[current_granularitas] = {
-            "status": "ok",
+            "status": "ok" if not current_values.empty and not previous_values.empty else "data_tidak_cukup",
             "periodeTerbaru": _label(latest, current_granularitas),
             "periodeSebelumnya": _label(previous, current_granularitas),
             "jumlahHuriaTurun": len(rows),

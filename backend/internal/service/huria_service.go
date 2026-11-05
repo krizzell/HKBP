@@ -172,35 +172,8 @@ func (s *huriaService) Update(ctx context.Context, id string, req domain.UpdateH
 		}
 
 		if newResortID != doc.IdResort {
-			newParentResort, err := s.resortRepo.FindByID(ctx, newResortID)
-			if err != nil {
-				if errors.Is(err, domain.ErrResortNotFound) {
-					return nil, domain.ErrHuriaParentNotFnd
-				}
-				return nil, err
-			}
-			if !newParentResort.Aktif {
-				return nil, domain.ErrHuriaParentInact
-			}
-
-			// Cek duplikasi nama di resort baru
-			currentName := doc.Nama
-			if req.Nama != nil && strings.TrimSpace(*req.Nama) != "" {
-				currentName = strings.TrimSpace(*req.Nama)
-			}
-			existing, err := s.repo.FindByIdResortAndNama(ctx, newResortID, currentName)
-			if err != nil {
-				return nil, err
-			}
-			if existing != nil && existing.ID != doc.ID {
-				return nil, domain.ErrHuriaNamaDup
-			}
-
-			doc.IdResort = newResortID
-			doc.IdDistrik = newParentResort.IdDistrik
-
-			// Cascade pembaruan ke seluruh koleksi aktivitas/keuangan turunan
-			_ = s.repo.CascadeUpdateResort(ctx, doc.ID, newResortID, newParentResort.IdDistrik)
+			// Pemindahan induk belum boleh menyalin Huria atau transaksi historis.
+			return nil, errors.New("pemindahan Huria ke Resort lain belum diaktifkan demi menjaga riwayat keuangan; data lama tidak diubah")
 		}
 	}
 
@@ -296,26 +269,15 @@ func (s *huriaService) Delete(ctx context.Context, id string) error {
 		return err
 	}
 
-	// Periksa apakah Huria memiliki catatan transaksi keuangan / aktivitas terdaftar
-	hasData, err := s.repo.HasFinancialOrActivityData(ctx, huriaID)
-	if err != nil {
-		return err
-	}
-
-	if hasData {
-		// Huria dinonaktifkan (Aktif: false), bukan dihapus permanen bila memiliki data
-		doc.Aktif = false
-		doc.DiubahPada = time.Now().UTC()
-		return s.repo.Update(ctx, huriaID, doc)
-	}
-
-	// Jika belum ada data keuangan, hapus dokumen huria secara permanen
-	if err := s.repo.Delete(ctx, huriaID); err != nil {
+	// Arsipkan, jangan hapus permanen; riwayat keuangan tetap melekat pada Huria.
+	doc.Aktif = false
+	doc.DiubahPada = time.Now().UTC()
+	if err := s.repo.Update(ctx, huriaID, doc); err != nil {
 		return err
 	}
 	if s.wilayahRepo != nil {
 		if err := s.wilayahRepo.SyncTree(ctx); err != nil {
-			return fmt.Errorf("master terhapus, tetapi sinkronisasi hierarki gagal: %w", err)
+			return fmt.Errorf("master diarsipkan, tetapi sinkronisasi hierarki gagal: %w", err)
 		}
 	}
 	return nil

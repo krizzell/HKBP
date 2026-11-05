@@ -30,7 +30,7 @@ import {
   ArrowUp,
   ArrowDown,
 } from 'lucide-react'
-import { formatRupiah, formatCompactRupiah, exportToCSV, getISOWeek } from '../utils/formatters'
+import { formatRupiah, formatCompactRupiah, exportToCSV } from '../utils/formatters'
 import {
   SvgBarChart,
   SvgLineChart,
@@ -49,6 +49,7 @@ import { useOrganisasiFilter } from '../hooks/useOrganisasiFilter'
 import { OrganisasiFilterBar } from '../components/OrganisasiFilterBar'
 import { PeriodeFilter } from '../components/PeriodeFilter'
 import { PythonAnalyticsPanel } from '../components/PythonAnalyticsPanel'
+import { resolvePeriod } from '../lib/periodeRange'
 
 const CHART_PALETTE = [
     'var(--color-chart-1)',
@@ -273,10 +274,13 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
     const hList = []
 
     distriks.forEach((d) => {
+      if (d.Aktif === false) return
       const distrikHurias = []
         ; (d.Resort || []).forEach((res) => {
+          if (res.Aktif === false) return
           const resortHurias = []
             ; (res.Huria || []).forEach((h) => {
+              if (h.Aktif === false) return
               const enrichedHuria = {
                 ...h,
                 distrikName: d.NamaDistrik,
@@ -310,7 +314,7 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
     }
   }, [distriks])
 
-  const isAdmin = (user?.role || '').toLowerCase() === 'admin'
+  const isAdmin = ['admin', 'admin_huria'].includes((user?.role || '').toLowerCase())
 
   // 2. Entitas Pembanding dari organisasiFilter
   const comparisonLevel = organisasiFilter.level || 'huria'
@@ -334,8 +338,8 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
         {
           id: String(huriaId),
           name: huriaName,
-          hurias: matchedHurias.length > 0 ? matchedHurias : allHurias.slice(0, 1),
-          churches: matchedHurias.length > 0 ? matchedHurias : allHurias.slice(0, 1),
+          hurias: matchedHurias,
+          churches: matchedHurias,
           color: CHART_PALETTE[0],
         },
       ]
@@ -372,103 +376,27 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
     return []
   }, [isAdmin, user, allHurias, allResorts, allDistriks, organisasiFilter.items, organisasiFilter.level])
 
-  // 3. Helper Cek Tanggal Sesuai Filter Waktu Aktif (Tahun, Bulan, Minggu)
-  const isDateInFilter = (dateStr) => {
-    if (!dateStr) return false
-    const { mode, tahun, bulan, mingguISO } = organisasiFilter.periode
-    const yr = tahun || '2026'
+  // 3. Satu sumber kebenaran periode untuk grafik, tabel, CSV, dan Python.
+  // Tahun: 1 tahun -> 12 bulan, range tahun -> per tahun.
+  // Bulan: 1 bulan -> per minggu, range bulan -> per bulan.
+  // Minggu: rentang tanggal dibulatkan Senin-Minggu, grafik per minggu.
+  const selectedPeriod = useMemo(() => resolvePeriod(organisasiFilter.periode), [organisasiFilter.periode])
 
-    if (mode === 'tahun') {
-      return dateStr.startsWith(`${yr}-`) || dateStr === yr
-    }
-    if (mode === 'bulan') {
-      const m = (bulan || '01').padStart(2, '0')
-      return dateStr.startsWith(`${yr}-${m}`)
-    }
-    if (mode === 'minggu') {
-      if (!dateStr.startsWith(`${yr}-`)) return false
-      const w = parseInt(mingguISO || '1', 10)
-      return getISOWeek(dateStr) === w
-    }
-    return dateStr.startsWith(`${yr}-`) || dateStr === yr
-  }
-
-  // 4. Agregasi Data Visualisasi Akurat Berdasarkan Filter Waktu & Wilayah
+  // 4. Agregasi data berdasarkan tanggal inklusif dan entitas yang dipilih.
   const { chartData, series, entityStats, totalOverall, timeAxisTitle, periodBadgeLabel } =
     useMemo(() => {
-      const { mode, tahun, bulan, mingguISO } = organisasiFilter.periode
-      const currentYear = tahun || '2026'
-
-      const mNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
-      const mKeys = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'))
-
-      // Map: [slotKey] -> { label, counts: {}, sums: {} }
       const dimMap = new Map()
-
+      selectedPeriod.slots.forEach((slot) => {
+        dimMap.set(slot.key, { label: slot.label, counts: {}, sums: {} })
+      })
       const ensureSlot = (key, label) => {
-        if (!dimMap.has(key)) {
-          dimMap.set(key, { label, counts: {}, sums: {} })
-        }
+        if (!dimMap.has(key)) dimMap.set(key, { label, counts: {}, sums: {} })
         return dimMap.get(key)
       }
-
-      let timeTitle = 'Bulan'
-      let badgeLabel = `Tahun ${currentYear}`
-
-      // Pre-populate slot urut berdasarkan mode waktu
-      if (mode === 'tahun') {
-        timeTitle = `Bulan (${currentYear})`
-        badgeLabel = `Tahun ${currentYear}`
-        mKeys.forEach((k, idx) => {
-          ensureSlot(k, mNames[idx])
-        })
-      } else if (mode === 'bulan') {
-        const bIdx = parseInt(bulan || '1', 10) - 1
-        const bName = mNames[bIdx] || 'Bulan'
-        timeTitle = `Minggu di ${bName} ${currentYear}`
-        badgeLabel = `${bName} ${currentYear}`
-        ensureSlot('w1', 'Mg 1 (1-7)')
-        ensureSlot('w2', 'Mg 2 (8-14)')
-        ensureSlot('w3', 'Mg 3 (15-21)')
-        ensureSlot('w4', 'Mg 4 (22-28)')
-        ensureSlot('w5', 'Mg 5 (29-31)')
-      } else if (mode === 'minggu') {
-        timeTitle = `Hari di Minggu ke-${mingguISO || '1'} (${currentYear})`
-        badgeLabel = `W-${mingguISO || '1'} (${currentYear})`
-        const dayLabels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
-        for (let d = 1; d <= 7; d++) {
-          ensureSlot(`d${d}`, dayLabels[d - 1])
-        }
-      }
-
-      // Slot generator untuk tiap record
-      const getSlotForDate = (dateStr) => {
-        if (!dateStr) return { key: 'other', label: 'Lainnya' }
-
-        if (mode === 'tahun') {
-          const m = parseInt(dateStr.substring(5, 7) || '1', 10)
-          const k = String(m).padStart(2, '0')
-          return { key: k, label: mNames[m - 1] || k }
-        }
-
-        if (mode === 'bulan') {
-          const day = parseInt(dateStr.substring(8, 10) || '1', 10)
-          if (day <= 7) return { key: 'w1', label: 'Mg 1 (1-7)' }
-          if (day <= 14) return { key: 'w2', label: 'Mg 2 (8-14)' }
-          if (day <= 21) return { key: 'w3', label: 'Mg 3 (15-21)' }
-          if (day <= 28) return { key: 'w4', label: 'Mg 4 (22-28)' }
-          return { key: 'w5', label: 'Mg 5 (29-31)' }
-        }
-
-        if (mode === 'minggu') {
-          const d = new Date(dateStr)
-          const dayOfWeek = (d.getDay() + 6) % 7 + 1 // 1=Sen, 7=Min
-          const dayLabels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
-          return { key: `d${dayOfWeek}`, label: dayLabels[dayOfWeek - 1] || `Hari ${dayOfWeek}` }
-        }
-
-        return { key: 'other', label: 'Lainnya' }
-      }
+      const isDateInFilter = (dateStr) => selectedPeriod.slotFor(dateStr) !== null
+      const getSlotForDate = (dateStr) => selectedPeriod.slotFor(dateStr)
+      const timeTitle = selectedPeriod.axis
+      const badgeLabel = selectedPeriod.label
 
       // Parse Sumber Data dan Kategori / Jenis
       const [primarySource, subCategory] = dataSource.split('::')
@@ -637,11 +565,11 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
         timeAxisTitle: timeTitle,
         periodBadgeLabel: badgeLabel,
       }
-    }, [comparedEntities, dataSource, metric, organisasiFilter.periode])
+    }, [comparedEntities, dataSource, metric, selectedPeriod])
 
   // Donut data untuk perbandingan proporsi entitas
   const donutData = useMemo(() => {
-    if (comparedEntities.length === 0) return []
+    if (comparedEntities.length === 0 || metric === 'AVG') return []
     return comparedEntities.map((ent) => {
       const stat = entityStats[ent.id] || {}
       return {
@@ -650,7 +578,7 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
         color: ent.color,
       }
     })
-  }, [comparedEntities, entityStats])
+  }, [comparedEntities, entityStats, metric])
 
   const availableChartTypeIds = useMemo(
     () =>
@@ -664,25 +592,25 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
   )
 
   const availableChartTypes = useMemo(
-    () => CHART_TYPES.filter((type) => availableChartTypeIds.includes(type.id)),
-    [availableChartTypeIds],
+    () => CHART_TYPES.filter((type) => availableChartTypeIds.includes(type.id) && !(metric === 'AVG' && ['pie', 'treemap'].includes(type.id))),
+    [availableChartTypeIds, metric],
   )
 
   useEffect(() => {
-    if (availableChartTypes.length > 0 && !availableChartTypeIds.includes(chartType)) {
+    if (availableChartTypes.length > 0 && !availableChartTypes.some((t) => t.id === chartType)) {
       setChartType(availableChartTypes[0].id)
     }
-  }, [availableChartTypeIds, availableChartTypes, chartType])
+  }, [availableChartTypes, chartType])
 
   // Data Tabel Perbandingan yang terurut secara stabil & konsisten
   const sortedComparedEntities = useMemo(() => {
     return [...comparedEntities].sort((a, b) => {
       const statA = entityStats[a.id] || { total: 0, count: 0, peakVal: 0 }
       const statB = entityStats[b.id] || { total: 0, count: 0, peakVal: 0 }
-      const shareA = totalOverall > 0 ? (statA.total / totalOverall) * 100 : 0
-      const shareB = totalOverall > 0 ? (statB.total / totalOverall) * 100 : 0
-      const avgA = chartData.length > 0 ? statA.total / chartData.length : 0
-      const avgB = chartData.length > 0 ? statB.total / chartData.length : 0
+      const shareA = metric !== 'AVG' && totalOverall > 0 ? (statA.total / totalOverall) * 100 : 0
+      const shareB = metric !== 'AVG' && totalOverall > 0 ? (statB.total / totalOverall) * 100 : 0
+      const avgA = metric === 'AVG' ? statA.total : chartData.length > 0 ? statA.total / chartData.length : 0
+      const avgB = metric === 'AVG' ? statB.total : chartData.length > 0 ? statB.total / chartData.length : 0
 
       let diff = 0
       if (tableSortField === 'name') {
@@ -703,7 +631,7 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
       }
       return tableSortDirection === 'asc' ? diff : -diff
     })
-  }, [comparedEntities, entityStats, totalOverall, chartData, tableSortField, tableSortDirection, comparisonLevel])
+  }, [comparedEntities, entityStats, totalOverall, chartData, tableSortField, tableSortDirection, comparisonLevel, metric])
 
   // CSV Export: Menampilkan informasi wilayah & filtering serta data visualisasi persis seperti yang tampil
   const handleExportCSV = () => {
@@ -802,10 +730,10 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
     // Baris TOTAL KESELURUHAN
     const totalRow = [escapeCSV('TOTAL KESELURUHAN')]
     comparedEntities.forEach((ent) => {
-      totalRow.push(columnSums[ent.id] || 0)
+      totalRow.push(metric === 'AVG' ? (entityStats[ent.id]?.total || 0) : (columnSums[ent.id] || 0))
     })
     if (comparedEntities.length > 1) {
-      totalRow.push(totalAllColumns)
+      totalRow.push(metric === 'AVG' ? totalOverall : totalAllColumns)
     }
     totalRow.push(
       escapeCSV(meta.sumber),
@@ -833,8 +761,8 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
     comparedEntities.forEach((ent) => {
       const stat = entityStats[ent.id] || { total: 0, peakVal: 0, peakLabel: '-' }
       const totalVal = stat.total || 0
-      const pct = totalOverall > 0 ? ((totalVal / totalOverall) * 100).toFixed(2) + '%' : '0%'
-      const avg = chartData.length > 0 ? Math.round(totalVal / chartData.length) : 0
+      const pct = metric !== 'AVG' && totalOverall > 0 ? ((totalVal / totalOverall) * 100).toFixed(2) + '%' : '—'
+      const avg = metric === 'AVG' ? totalVal : chartData.length > 0 ? Math.round(totalVal / chartData.length) : 0
       const peakFormatted = `${meta.unit === 'Rp' ? formatRupiah(stat.peakVal) : stat.peakVal} (${stat.peakLabel})`
       const totalFormatted = meta.unit === 'Rp' ? formatRupiah(totalVal) : `${totalVal.toLocaleString('id-ID')} Jiwa`
 
@@ -934,7 +862,7 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
         </aside>
 
         <main className="min-w-0 lg:col-span-7 flex flex-col gap-5">
-          {comparedEntities.length > 0 && (
+          {comparedEntities.length > 0 && dataSource.startsWith('pemasukan') && (
             <PythonAnalyticsPanel
               idHuria={analyticsHuriaIds}
               kategori={dataSource.startsWith('pemasukan::') ? dataSource.split('::')[1] : undefined}

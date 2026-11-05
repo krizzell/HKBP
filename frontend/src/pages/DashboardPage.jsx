@@ -40,7 +40,7 @@ export const DashboardPage = ({ wilayahData = [], onNavigateTab }) => {
 
   const reportYear = useMemo(() => {
     const years = (wilayahData[0]?.Pusat?.Distrik || [])
-      .flatMap((d) => d.Resort || []).flatMap((r) => r.Huria || [])
+      .filter((d) => d.Aktif !== false).flatMap((d) => d.Resort || []).filter((r) => r.Aktif !== false).flatMap((r) => r.Huria || []).filter((h) => h.Aktif !== false)
       .flatMap((h) => h.PemasukanJemaat || [])
       .map((t) => Number((t.Tanggal || '').slice(0, 4)))
       .filter((yr) => Number.isInteger(yr) && yr >= 2000 && yr <= 2100)
@@ -82,8 +82,11 @@ export const DashboardPage = ({ wilayahData = [], onNavigateTab }) => {
     const userHuriaName = user?.namaHuria
 
     distriks.forEach((d) => {
+      if (d.Aktif === false) return
       ;(d.Resort || []).forEach((res) => {
+        if (res.Aktif === false) return
         ;(res.Huria || []).forEach((h) => {
+          if (h.Aktif === false) return
           if (isAdmin) {
             const matchId = userHuriaId && String(h.IdHuria) === String(userHuriaId)
             const matchName =
@@ -120,8 +123,7 @@ export const DashboardPage = ({ wilayahData = [], onNavigateTab }) => {
               pjKas = alloc.kas
               pjPusat = alloc.pusat
             } else {
-              pjKas = Math.round(nominal * 0.45)
-              pjPusat = Math.round(nominal * 0.55)
+              // Alokasi belum dicatat: jangan menganggap formula 55/45 sebagai realisasi.
             }
 
             pemasukan += nominal

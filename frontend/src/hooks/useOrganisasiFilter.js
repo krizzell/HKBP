@@ -111,7 +111,7 @@ export function useOrganisasiFilter({ user = null, liveWilayahData = null, initi
                   (user?.namaHuria && h.nama === user.namaHuria) ||
                   (user?.namaHuria && (h.nama || '').toLowerCase() === user.namaHuria.toLowerCase()) ||
                   (user?.namaHuria && (h.nama || '').includes(user.namaHuria))
-              ) || huriaOpts[0]
+              )
 
               if (matchedHuria) {
                 const matchedResort = resortOpts.find(
@@ -131,20 +131,20 @@ export function useOrganisasiFilter({ user = null, liveWilayahData = null, initi
             if (locks.distrik && distrikOpts.length > 0 && next.distrik.length === 0) {
               const matched = distrikOpts.find(
                 (d) => d.id === user?.idDistrik || d.nama === user?.namaDistrik
-              ) || distrikOpts[0]
-              next.distrik = [String(matched.id)]
+              )
+              if (matched) next.distrik = [String(matched.id)]
             }
             if (locks.resort && resortOpts.length > 0 && next.resort.length === 0) {
               const matched = resortOpts.find(
                 (r) => r.id === user?.idResort || r.nama === user?.namaResort
-              ) || resortOpts[0]
-              next.resort = [String(matched.id)]
+              )
+              if (matched) next.resort = [String(matched.id)]
             }
             if (locks.huria && huriaOpts.length > 0 && next.huria.length === 0) {
               const matched = huriaOpts.find(
                 (h) => h.id === user?.idHuria || h.nama === user?.namaHuria
-              ) || huriaOpts[0]
-              next.huria = [String(matched.id)]
+              )
+              if (matched) next.huria = [String(matched.id)]
             }
             return next
           })
@@ -286,7 +286,7 @@ export function useOrganisasiFilter({ user = null, liveWilayahData = null, initi
           (user?.namaHuria && h.nama === user.namaHuria) ||
           (user?.namaHuria && (h.nama || '').toLowerCase() === user.namaHuria.toLowerCase()) ||
           (user?.namaHuria && (h.nama || '').includes(user.namaHuria))
-      ) || options.huria[0]
+      )
 
       const matchedResort = options.resort.find(
         (r) => String(r.id) === String(matchedHuria?.idInduk)
@@ -301,12 +301,11 @@ export function useOrganisasiFilter({ user = null, liveWilayahData = null, initi
         huria: matchedHuria ? [String(matchedHuria.id)] : [],
       })
     } else if (locks.distrik && options.distrik.length > 0) {
-      const defaultDistrik = options.distrik[0].id
-      setSelectedState({
-        distrik: [String(defaultDistrik)],
-        resort: [],
-        huria: [],
-      })
+      const matchedDistrik = options.distrik.find((d) =>
+        (user?.idDistrik && String(d.id) === String(user.idDistrik)) ||
+        (user?.namaDistrik && d.nama === user.namaDistrik)
+      )
+      setSelectedState({ distrik: matchedDistrik ? [String(matchedDistrik.id)] : [], resort: [], huria: [] })
     } else {
       setSelectedState(EMPTY_SELECTION)
     }

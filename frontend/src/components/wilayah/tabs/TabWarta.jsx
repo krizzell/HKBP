@@ -19,7 +19,7 @@ export function TabWarta({ church }) {
     subtema = '',
     tataIbadah = [],
     tingtingMarragam = [],
-    tingtingParhepengon = {},
+    tingtingParhepengon = null,
   } = warta
 
   return (
@@ -85,46 +85,52 @@ export function TabWarta({ church }) {
           <span>Tingting Parhepengon (Laporan Keuangan Kas)</span>
         </h3>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
-          <div className="p-4 rounded-xl bg-canvas border border-line">
-            <span className="text-[11px] font-semibold text-muted">Saldo Awal Kas</span>
-            <div className="text-base sm:text-lg font-bold text-ink tabular-nums mt-1">
-              {formatRupiah(tingtingParhepengon.saldoAwal || 0)}
+        {tingtingParhepengon ? (
+          <>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
+            <div className="p-4 rounded-xl bg-canvas border border-line">
+              <span className="text-[11px] font-semibold text-muted">Saldo Awal Kas</span>
+              <div className="text-base sm:text-lg font-bold text-ink tabular-nums mt-1">
+                {formatRupiah(tingtingParhepengon.saldoAwal || 0)}
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl bg-canvas border border-line">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-muted">
+                <span>Penerimaan Minggu Ini</span>
+                <ArrowDownRight className="w-3.5 h-3.5 text-success" />
+              </div>
+              <div className="text-base sm:text-lg font-bold text-success tabular-nums mt-1">
+                +{formatRupiah(tingtingParhepengon.pemasukanMingguIni || 0)}
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl bg-canvas border border-line">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-muted">
+                <span>Pengeluaran Minggu Ini</span>
+                <ArrowUpRight className="w-3.5 h-3.5 text-danger" />
+              </div>
+              <div className="text-base sm:text-lg font-bold text-danger tabular-nums mt-1">
+                -{formatRupiah(tingtingParhepengon.pengeluaranMingguIni || 0)}
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl bg-primary-50/70 border border-primary-200">
+              <span className="text-[11px] font-bold text-primary">Saldo Akhir Kas</span>
+              <div className="text-base sm:text-lg font-extrabold text-primary tabular-nums mt-1">
+                {formatRupiah(tingtingParhepengon.saldoAkhir || 0)}
+              </div>
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-canvas border border-line">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-muted">
-              <span>Penerimaan Minggu Ini</span>
-              <ArrowDownRight className="w-3.5 h-3.5 text-success" />
+          {tingtingParhepengon.keterangan && (
+            <div className="text-xs text-muted italic">
+              * {tingtingParhepengon.keterangan}
             </div>
-            <div className="text-base sm:text-lg font-bold text-success tabular-nums mt-1">
-              +{formatRupiah(tingtingParhepengon.pemasukanMingguIni || 0)}
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-canvas border border-line">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-muted">
-              <span>Pengeluaran Minggu Ini</span>
-              <ArrowUpRight className="w-3.5 h-3.5 text-danger" />
-            </div>
-            <div className="text-base sm:text-lg font-bold text-danger tabular-nums mt-1">
-              -{formatRupiah(tingtingParhepengon.pengeluaranMingguIni || 0)}
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-primary-50/70 border border-primary-200">
-            <span className="text-[11px] font-bold text-primary">Saldo Akhir Kas</span>
-            <div className="text-base sm:text-lg font-extrabold text-primary tabular-nums mt-1">
-              {formatRupiah(tingtingParhepengon.saldoAkhir || 0)}
-            </div>
-          </div>
-        </div>
-
-        {tingtingParhepengon.keterangan && (
-          <div className="text-xs text-muted italic">
-            * {tingtingParhepengon.keterangan}
-          </div>
+          )}
+          </>
+        ) : (
+          <p className="text-xs text-muted py-4">Saldo kas dan pengeluaran belum tersedia pada sumber data. Nilai tidak diestimasi otomatis.</p>
         )}
       </div>
     </div>

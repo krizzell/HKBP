@@ -67,6 +67,7 @@ type RincianSetoranPusat struct {
 }
 
 type Huria struct {
+	Aktif               *bool                 `bson:"Aktif,omitempty" json:"Aktif,omitempty"`
 	Versi               int64                 `bson:"Versi,omitempty" json:"Versi,omitempty"`
 	NamaHuria           string                `bson:"NamaHuria" json:"NamaHuria"`
 	IdHuria             string                `bson:"IdHuria" json:"IdHuria"`
@@ -86,6 +87,7 @@ type Huria struct {
 }
 
 type Resort struct {
+	Aktif             *bool   `bson:"Aktif,omitempty" json:"Aktif,omitempty"`
 	IdResort          string  `bson:"IdResort,omitempty" json:"IdResort,omitempty"`
 	KodeResort        string  `bson:"KodeResort,omitempty" json:"KodeResort,omitempty"`
 	NamaResort        string  `bson:"NamaResort" json:"NamaResort"`
@@ -94,6 +96,7 @@ type Resort struct {
 }
 
 type Distrik struct {
+	Aktif       *bool    `bson:"Aktif,omitempty" json:"Aktif,omitempty"`
 	IdDistrik   string   `bson:"IdDistrik,omitempty" json:"IdDistrik,omitempty"`
 	KodeDistrik string   `bson:"KodeDistrik,omitempty" json:"KodeDistrik,omitempty"`
 	NamaDistrik string   `bson:"NamaDistrik" json:"NamaDistrik"`

@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 
+from app.services.category_match import filter_kategori
+
 
 MIN_PERIODS = 12
 
@@ -43,21 +45,13 @@ def _aggregate(frame: pd.DataFrame, granularitas: str, mulai=None, akhir=None, k
         work = work[work["tanggal"] >= pd.Timestamp(mulai)]
     if akhir:
         work = work[work["tanggal"] <= pd.Timestamp(akhir)]
-    if kategori:
-        category = kategori.casefold()
-        category_columns = [column for column in ("namaKategori", "keterangan") if column in work]
-        if not category_columns:
-            return pd.Series(dtype="float64")
-        mask = work[category_columns].fillna("").astype(str).apply(
-            lambda column: column.str.casefold().str.contains(category, regex=False)
-        ).any(axis=1)
-        work = work[mask]
+    work = filter_kategori(work, kategori)
     if work.empty:
         return pd.Series(dtype="float64")
     freq = "W-SUN" if granularitas == "mingguan" else "M"
     values = work.groupby(work["tanggal"].dt.to_period(freq))["nominal"].sum()
     periods = _periods(work, granularitas)
-    return values.reindex(periods, fill_value=0).astype(float)
+    return values.astype(float)  # Jangan isi gap tanpa laporan dengan nominal nol.
 
 
 def _moving_average(values: np.ndarray, horizon: int) -> np.ndarray:
@@ -147,6 +141,22 @@ def prakiraan_pemasukan(
         "mulai": values.index[0].start_time.date().isoformat() if len(values) else None,
         "akhir": values.index[-1].end_time.date().isoformat() if len(values) else None,
     }
+    # Periode di antara dua laporan yang tidak ada record belum tentu bernilai nol.
+    # Kembalikan status yang dapat dibaca UI, bukan menjalankan model pada deret palsu.
+    if len(values) >= 2:
+        complete = pd.period_range(values.index[0], values.index[-1], freq=values.index.freq)
+        missing = complete.difference(values.index)
+        if len(missing) > 0:
+            return {
+                "status": "data_tidak_cukup",
+                "metode": {"model": None, "granularitas": granularitas, "musiman": False},
+                "rentangData": rentang,
+                "jumlahSampel": int(len(values)),
+                "histori": [],
+                "prakiraan": [],
+                "galat": {"model": None, "pembanding": None, "satuan": "rupiah"},
+                "catatan": [f"Ada {len(missing)} periode tanpa laporan dalam rentang historis. Lengkapi laporan atau konfirmasikan nol sebelum memprakirakan."],
+            }
     if len(values) < MIN_PERIODS:
         return {
             "status": "data_tidak_cukup",

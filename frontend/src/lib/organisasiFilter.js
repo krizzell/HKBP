@@ -31,14 +31,9 @@ export const EMPTY_SELECTION = {
   huria: [],
 }
 
-export const DEFAULT_PERIODE = {
-  mode: 'tahun',
-  tahun: '2026',
-  bulan: '',
-  mingguISO: '',
-  startDate: '',
-  endDate: '',
-}
+import { defaultRangePeriod } from './periodeRange'
+
+export const DEFAULT_PERIODE = defaultRangePeriod()
 
 /**
  * Menentukan level perbandingan aktif.
@@ -298,6 +293,9 @@ export function toQuery(state = {}) {
   if (per.mingguISO) params.set('mingguISO', per.mingguISO)
   if (per.startDate) params.set('startDate', per.startDate)
   if (per.endDate) params.set('endDate', per.endDate)
+  for (const key of ['tahunAwal', 'tahunAkhir', 'bulanAwal', 'bulanAkhir']) {
+    if (per[key]) params.set(key, per[key])
+  }
 
   return params.toString()
 }
@@ -342,6 +340,10 @@ export function fromQuery(input) {
     mingguISO: searchParams.get('mingguISO') || '',
     startDate: searchParams.get('startDate') || '',
     endDate: searchParams.get('endDate') || '',
+    tahunAwal: searchParams.get('tahunAwal') || searchParams.get('tahun') || DEFAULT_PERIODE.tahunAwal,
+    tahunAkhir: searchParams.get('tahunAkhir') || searchParams.get('tahun') || DEFAULT_PERIODE.tahunAkhir,
+    bulanAwal: searchParams.get('bulanAwal') || (searchParams.get('tahun') && searchParams.get('bulan') ? `${searchParams.get('tahun')}-${searchParams.get('bulan')}` : DEFAULT_PERIODE.bulanAwal),
+    bulanAkhir: searchParams.get('bulanAkhir') || (searchParams.get('tahun') && searchParams.get('bulan') ? `${searchParams.get('tahun')}-${searchParams.get('bulan')}` : DEFAULT_PERIODE.bulanAkhir),
   }
 
   return { selected, periode }

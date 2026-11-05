@@ -1,3 +1,4 @@
+import { parseISO, isoUTC, weekMonday, weekId } from '../lib/periodeRange'
 import client from './client'
 
 /**
@@ -788,7 +789,7 @@ export async function getWilayahAnak({
   })
 
   // Deteksi jika idInduk adalah mock ID khusus pengujian (cth 'r-01-01', 'd-01')
-  const isMockTestRequest = idInduk === 'r-01-01' || idInduk === 'd-01'
+  const isMockTestRequest = import.meta.env.VITE_ENABLE_MOCK_WILAYAH === 'true' && (idInduk === 'r-01-01' || idInduk === 'd-01')
 
   let liveTree = null
   if (!isMockTestRequest || liveWilayahTree) {
@@ -839,8 +840,8 @@ export async function getWilayahAnak({
             const huriaAvgHadir =
               dateSet.size > 0
                 ? Math.round(hadirSum / dateSet.size)
-                : Math.round((h.JumlahJemaat || 0) * 0.72)
-            distrikKehadiran += huriaAvgHadir
+                : null
+            distrikKehadiran += huriaAvgHadir ?? 0
           })
         })
 
@@ -853,7 +854,7 @@ export async function getWilayahAnak({
           kodeLengkap: dKode,
           nama: d.NamaDistrik,
           namaPimpinan: praeses || undefined,
-          aktif: true,
+          aktif: d.Aktif !== false,
           jumlahAnak: (d.Resort || []).length,
           jumlahJemaat: distrikJemaat,
           totalPemasukan: distrikPemasukan,
@@ -871,7 +872,7 @@ export async function getWilayahAnak({
             d.IdDistrik === idInduk ||
             d.KodeDistrik === idInduk ||
             d.NamaDistrik.toLowerCase() === (idInduk || '').toLowerCase()
-        ) || distriks[0]
+        )
 
       if (foundDistrik) {
         let parentDistrikPemasukan = 0
@@ -907,8 +908,8 @@ export async function getWilayahAnak({
             const huriaAvgHadir =
               dateSet.size > 0
                 ? Math.round(hadirSum / dateSet.size)
-                : Math.round((h.JumlahJemaat || 0) * 0.72)
-            resortKehadiran += huriaAvgHadir
+                : null
+            resortKehadiran += huriaAvgHadir ?? 0
           })
 
           const rId = r.IdResort || r.KodeResort || r.NamaResort
@@ -920,7 +921,7 @@ export async function getWilayahAnak({
             kodeLengkap: rKode,
             nama: r.NamaResort,
             namaPimpinan: pendetaResort || undefined,
-            aktif: true,
+            aktif: r.Aktif !== false,
             jumlahAnak: (r.Huria || []).length,
             jumlahJemaat: resortJemaat,
             totalPemasukan: resortPemasukan,
@@ -946,9 +947,6 @@ export async function getWilayahAnak({
           break
         }
       }
-      if (!foundResort && distriks[0]?.Resort?.[0]) {
-        foundResort = distriks[0].Resort[0]
-      }
 
       if (foundResort) {
         let parentResortPemasukan = 0
@@ -973,7 +971,7 @@ export async function getWilayahAnak({
           const huriaAvgHadir =
             dateSet.size > 0
               ? Math.round(hadirSum / dateSet.size)
-              : Math.round((h.JumlahJemaat || 0) * 0.72)
+              : null
 
           const hId = h.IdHuria || h.NamaHuria
           const hKode = h.IdHuria || `H-${String(hIdx + 1).padStart(2, '0')}`
@@ -984,8 +982,8 @@ export async function getWilayahAnak({
             kodeLengkap: hKode,
             nama: h.NamaHuria,
             namaPimpinan: h.NamaPendetaPimpinan || undefined,
-            aktif: true,
-            jumlahAnak: (h.Lunggu || []).length || 4,
+            aktif: h.Aktif !== false,
+            jumlahAnak: (h.Lunggu || []).length,
             jumlahJemaat: h.JumlahJemaat || 0,
             totalPemasukan: hPemasukan,
             rataKehadiran: huriaAvgHadir,
@@ -1000,7 +998,7 @@ export async function getWilayahAnak({
   }
 
   // Fallback ke mock data (untuk lingkungan unit test offline / mock ID)
-  if (rawList.length === 0) {
+  if (rawList.length === 0 && import.meta.env.VITE_ENABLE_MOCK_WILAYAH === 'true') {
     if (level === 'distrik') {
       rawList = [...MOCK_DISTRIKS]
     } else if (level === 'resort') {
@@ -1015,7 +1013,7 @@ export async function getWilayahAnak({
   const jumlahAnakAll = rawList.length
   const totalJemaatAll = rawList.reduce((acc, it) => acc + (it.jumlahJemaat || 0), 0)
   const rataKehadiranAll = rawList.reduce((acc, it) => {
-    const itHadir = it.rataKehadiran !== undefined ? it.rataKehadiran : Math.round((it.jumlahJemaat || 0) * 0.72)
+    const itHadir = it.rataKehadiran ?? 0
     return acc + itHadir
   }, 0)
 
@@ -1104,7 +1102,7 @@ export async function getWilayahDetail(level, id, { signal } = {}) {
   // Cek database live tree
   const liveTree = await fetchLiveWilayah()
 
-  if (liveTree && liveTree[0]?.Pusat?.Distrik?.length > 0 && id !== 'h-01-01-01') {
+  if (liveTree && liveTree[0]?.Pusat?.Distrik?.length > 0) {
     const distriks = liveTree[0].Pusat.Distrik
 
     if (level === 'distrik') {
@@ -1132,7 +1130,7 @@ export async function getWilayahDetail(level, id, { signal } = {}) {
           kodeLengkap: d.KodeDistrik,
           nama: d.NamaDistrik,
           namaPimpinan: d.NamaPraeses || d.NamaPimpinan || undefined,
-          aktif: true,
+          aktif: d.Aktif !== false,
           jumlahAnak: (d.Resort || []).length,
           jumlahJemaat: totalJemaat,
           totalPemasukan,
@@ -1179,7 +1177,7 @@ export async function getWilayahDetail(level, id, { signal } = {}) {
           kodeLengkap: foundResort.KodeResort,
           nama: foundResort.NamaResort,
           namaPimpinan: resortPimpinan || undefined,
-          aktif: true,
+          aktif: foundResort.Aktif !== false,
           jumlahAnak: (foundResort.Huria || []).length,
           jumlahJemaat: totalJemaat,
           totalPemasukan,
@@ -1237,11 +1235,10 @@ export async function getWilayahDetail(level, id, { signal } = {}) {
             totalKasHuria += a.kas
             totalSetoranPusat += a.pusat
           } else {
-            totalKasHuria += Math.round(nom * 0.45)
-            totalSetoranPusat += Math.round(nom * 0.55)
+            // Data alokasi belum dicatat, jangan reka nilai 55/45 dari transaksi.
           }
 
-          const kat = pj.Keterangan || 'Pelean Minggu'
+          const kat = (foundHuria.KategoriPemasukan || []).find((k) => k.IdKategori === pj.IdKategori)?.NamaKategori || pj.Keterangan || 'Kategori belum diketahui'
           categoryCounts[kat] = (categoryCounts[kat] || 0) + nom
 
           recentTx.push({
@@ -1249,9 +1246,9 @@ export async function getWilayahDetail(level, id, { signal } = {}) {
             tanggal: pj.Tanggal,
             kategori: kat,
             nominal: nom,
-            metode: 'Tunai di Gereja',
+            metode: 'Belum tercatat',
             keterangan: pj.Keterangan || '-',
-            sesi: 'Kebaktian Minggu',
+            sesi: '-',
           })
         })
 
@@ -1264,7 +1261,7 @@ export async function getWilayahDetail(level, id, { signal } = {}) {
         const avgHadir =
           (foundHuria.SesiIbadah || []).length > 0
             ? Math.round(totalHadir / foundHuria.SesiIbadah.length)
-            : Math.round((foundHuria.JumlahJemaat || 1200) * 0.72)
+            : null
 
         const komposisiKategori = Object.entries(categoryCounts).map(([name, value], idx) => ({
           name,
@@ -1281,10 +1278,67 @@ export async function getWilayahDetail(level, id, { signal } = {}) {
         const lungguList = (foundHuria.Lunggu || []).map((l, lIdx) => ({
           id: l.IdLunggu || `l-${lIdx + 1}`,
           nama: l.NamaLunggu,
-          sintua: l.Keterangan || 'St. Sintua Lunggu',
-          kk: Math.round((foundHuria.JumlahJemaat || 1200) / 16),
-          jiwa: Math.round((foundHuria.JumlahJemaat || 1200) / 4),
+          sintua: l.Keterangan || '-',
+          kk: l.JumlahKK ?? 0,
+          jiwa: l.JumlahJiwa ?? 0,
         }))
+
+        // Tren, pelean, dan status setoran berasal dari record yang benar-benar dicatat.
+        const weekMap = new Map()
+        const getWeek = (tanggal) => {
+          const d = parseISO(tanggal)
+          if (!d) return null
+          return isoUTC(weekMonday(d))
+        }
+        ;(foundHuria.PemasukanJemaat || []).forEach((tx) => {
+          const week = getWeek(tx.Tanggal)
+          if (!week) return
+          const old = weekMap.get(week) || { minggu: weekId(parseISO(week)), label: week, total: 0, hadir: 0 }
+          old.total += Number(tx.Nominal || 0)
+          weekMap.set(week, old)
+        })
+        ;(foundHuria.SesiIbadah || []).forEach((sesi) => {
+          const week = getWeek(sesi.Tanggal)
+          if (!week) return
+          const old = weekMap.get(week) || { minggu: weekId(parseISO(week)), label: week, total: 0, hadir: 0 }
+          old.hadir += Number(sesi.JumlahHadir || 0)
+          weekMap.set(week, old)
+        })
+        const trenMingguan = [...weekMap.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, row]) => row).slice(-12)
+
+        const types = ['1a', '1b', '2a', '2b']
+        const allSessions = foundHuria.SesiIbadah || []
+        const peleanRows = allSessions.map((session) => {
+          const peleans = {}
+          ;(session.Pelean || []).forEach((item) => {
+            const jenis = String(item.Jenis || '').toLowerCase()
+            const label = `Pelean ${jenis.toUpperCase()}`
+            peleans[label] = (peleans[label] || 0) + Number(item.Nominal || 0)
+            if (jenis && !types.includes(jenis)) types.push(jenis)
+          })
+          return { sesi: `${session.NamaSesi || 'Sesi Ibadah'} (${session.Tanggal || '-'})`, peleans,
+            totalSesi: Object.values(peleans).reduce((a, b) => a + b, 0) }
+        })
+        const peleanTotal = peleanRows.reduce((acc, item) => acc + item.totalSesi, 0)
+        const allocationById = new Map((foundHuria.AlokasiTransaksi || []).map((a) => [a.IdAlokasi, a]))
+        const details = foundHuria.RincianSetoranPusat || []
+        const allocatedTotal = (foundHuria.AlokasiTransaksi || []).reduce((acc, a) => acc + Number(a.Nominal || 0), 0)
+        const centerTotal = (foundHuria.AlokasiTransaksi || []).filter((a) => a.Peruntukan === 'Setoran Pusat').reduce((acc, a) => acc + Number(a.Nominal || 0), 0)
+        const pusatPersen = allocatedTotal > 0 ? 100 * centerTotal / allocatedTotal : null
+        const daftarSetoran = (foundHuria.SetoranPusat || []).map((st) => {
+          const entries = details.filter((detail) => detail.IdSetoran === st.IdSetoran)
+          const linked = [...new Set(entries.map((item) => item.IdAlokasi))]
+          const kewajiban = linked.reduce((sum, id) => sum + Number(allocationById.get(id)?.Nominal || 0), 0)
+          const terbayar = entries.reduce((sum, item) => sum + Number(item.NominalDilunasi || 0), 0)
+          const verified = linked.length > 0 && linked.every((id) => allocationById.has(id))
+          return {
+            id: st.IdSetoran, periode: st.Periode || '-', tanggalSetor: st.TanggalSetor || '-',
+            wajibPusat: verified ? kewajiban : 0,
+            disetor: Number(st.TotalSetoran || 0),
+            buktiRef: st.Keterangan || '-',
+            status: !verified ? 'tidak_diketahui' : terbayar >= kewajiban ? 'lunas' : terbayar > 0 ? 'sebagian' : 'belum',
+          }
+        })
 
         return {
           id: foundHuria.IdHuria,
@@ -1292,32 +1346,27 @@ export async function getWilayahDetail(level, id, { signal } = {}) {
           kodeLengkap: foundHuria.IdHuria,
           nama: foundHuria.NamaHuria,
           namaPimpinan: foundHuria.NamaPendetaPimpinan,
-          aktif: true,
-          jumlahJemaat: foundHuria.JumlahJemaat || 1200,
+          aktif: foundHuria.Aktif !== false,
+          jumlahJemaat: foundHuria.JumlahJemaat ?? 0,
           totalPemasukan,
           leluhur: [
             { level: 'distrik', id: parentDistrik?.IdDistrik || parentDistrik?.NamaDistrik, nama: parentDistrik?.NamaDistrik },
             { level: 'resort', id: parentResort?.IdResort || parentResort?.NamaResort, nama: parentResort?.NamaResort },
           ],
           profil: {
-            lokasi: foundHuria.LokasiHuria || 'Jl. Gereja HKBP',
-            tahunBerdiri: foundHuria.TahunBerdiri || '1960',
-            pendetaPimpinan: foundHuria.NamaPendetaPimpinan || 'Pdt. Pimpinan Huria, S.Th',
-            jumlahJemaat: foundHuria.JumlahJemaat || 1200,
-            kepalaKeluarga: foundHuria.KepalaKeluarga || `${Math.round((foundHuria.JumlahJemaat || 1200) / 3.8)} KK`,
-            jumlahLunggu: (foundHuria.Lunggu || []).length || 4,
+            lokasi: foundHuria.LokasiHuria || '-',
+            tahunBerdiri: foundHuria.TahunBerdiri || '-',
+            pendetaPimpinan: foundHuria.NamaPendetaPimpinan || '-',
+            jumlahJemaat: foundHuria.JumlahJemaat ?? 0,
+            kepalaKeluarga: foundHuria.KepalaKeluarga || '-',
+            jumlahLunggu: (foundHuria.Lunggu || []).length,
           },
           ringkasan: {
             totalPemasukan,
             bagianHuria: totalKasHuria,
             bagianPusat: totalSetoranPusat,
             rataKehadiran: avgHadir,
-            trenMingguan: [
-              { minggu: 'Mg 1', label: '04 Okt', total: Math.round(totalPemasukan * 0.22), hadir: avgHadir },
-              { minggu: 'Mg 2', label: '11 Okt', total: Math.round(totalPemasukan * 0.25), hadir: Math.round(avgHadir * 1.05) },
-              { minggu: 'Mg 3', label: '18 Okt', total: Math.round(totalPemasukan * 0.28), hadir: Math.round(avgHadir * 1.1) },
-              { minggu: 'Mg 4', label: '25 Okt', total: Math.round(totalPemasukan * 0.25), hadir: Math.round(avgHadir * 0.95) },
-            ],
+            trenMingguan,
           },
           sesiIbadah: {
             daftar: (foundHuria.SesiIbadah || []).slice(0, 10).map((s, idx) => ({
@@ -1327,74 +1376,40 @@ export async function getWilayahDetail(level, id, { signal } = {}) {
               jam: s.JamMulai || '09:00 WIB',
               hadir: s.JumlahHadir,
             })),
-            kehadiranPerSesi:
-              kehadiranPerSesi.length > 0
-                ? kehadiranPerSesi
-                : [
-                    { sesi: 'Kebaktian Pagi (Sekolah Minggu)', hadir: Math.round(avgHadir * 0.35) },
-                    { sesi: 'Kebaktian Umum Bahasa Batak', hadir: Math.round(avgHadir * 0.45) },
-                    { sesi: 'Kebaktian Siang Bahasa Indonesia', hadir: Math.round(avgHadir * 0.2) },
-                  ],
+            kehadiranPerSesi,
           },
           pemasukan: {
             komposisiKategori,
             rincianPeleanPerSesi: {
-              kolomPelean: ['Pelean 1A', 'Pelean 1B', 'Pelean 2A', 'Pelean 2B'],
-              baris: [
-                {
-                  sesi: 'Kebaktian Umum',
-                  peleans: {
-                    'Pelean 1A': Math.round(totalPemasukan * 0.3),
-                    'Pelean 1B': Math.round(totalPemasukan * 0.25),
-                    'Pelean 2A': Math.round(totalPemasukan * 0.25),
-                    'Pelean 2B': Math.round(totalPemasukan * 0.2),
-                  },
-                  totalSesi: totalPemasukan,
-                },
-              ],
-              grandTotal: totalPemasukan,
+              kolomPelean: types.map((kind) => `Pelean ${kind.toUpperCase()}`),
+              baris: peleanRows,
+              grandTotal: peleanTotal,
             },
             transaksiTerbaru: recentTx.slice(0, 10),
           },
           alokasiSetoran: {
-            alokasiPersentase: { huriaPersen: 45, pusatPersen: 55 },
-            daftarSetoran: (foundHuria.SetoranPusat || []).slice(0, 10).map((st, idx) => ({
-              id: st.IdSetoran || `st-${idx}`,
-              periode: st.Periode || '2026-10',
-              tanggal: st.TanggalSetor || '2026-10-15',
-              jumlahTagihan: st.TotalSetoran || Math.round(totalSetoranPusat * 0.1),
-              disetor: st.TotalSetoran || Math.round(totalSetoranPusat * 0.1),
-              status: 'lunas',
-              sisa: 0,
-            })),
+            alokasiPersentase: { huriaPersen: pusatPersen === null ? null : 100 - pusatPersen, pusatPersen },
+            daftarSetoran,
           },
-          lunggu:
-            lungguList.length > 0
-              ? lungguList
-              : [
-                  { id: 'l-01', nama: 'Lunggu I Sion', sintua: 'St. J. Siregar', kk: 45, jiwa: 180 },
-                  { id: 'l-02', nama: 'Lunggu II Bethel', sintua: 'St. M. Hutabarat', kk: 38, jiwa: 152 },
-                  { id: 'l-03', nama: 'Lunggu III Jerusalem', sintua: 'St. P. Nababan', kk: 52, jiwa: 210 },
-                  { id: 'l-04', nama: 'Lunggu IV Efrata', sintua: 'St. R. Simanjuntak', kk: 40, jiwa: 165 },
-                ],
+          lunggu: lungguList,
           warta: foundHuria.WartaJemaat?.Tema
             ? {
-                mingguTgl: 'Minggu XX Setelah Trinitatis',
+                mingguTgl: foundHuria.WartaJemaat.Tanggal || '-',
                 tema: foundHuria.WartaJemaat.Tema,
                 subtema: foundHuria.WartaJemaat.SubTema,
                 tataIbadah: (foundHuria.WartaJemaat.TataIbadah || []).map((b, i) => ({ no: i + 1, bagian: b })),
                 tingtingMarragam: foundHuria.WartaJemaat.TingtingNaMarragam || [],
-                tingtingParhepengon: {
-                  pemasukanMingguLalu: totalPemasukan,
-                  pengeluaranMingguLalu: totalKasHuria,
-                  saldoKas: totalPemasukan - totalSetoranPusat,
-                },
+                tingtingParhepengon: null, // Tidak ada sumber transaksi pengeluaran/saldo terverifikasi.
               }
-            : MOCK_PRIMARY_HURIA.warta,
+            : null,
         }
       }
     }
   }
+
+  // Mock hanya diizinkan jika mode demo diaktifkan secara eksplisit.
+  // Saat memakai database nyata, jangan tampilkan data tiruan sebagai data sungguhan.
+  if (import.meta.env.VITE_ENABLE_MOCK_WILAYAH !== 'true') return null
 
   // Fallback ke mock bila offline / testing
   if (level === 'distrik') {

@@ -154,6 +154,7 @@ func (s *wilayahService) UpdatePemasukan(ctx context.Context, idHuria string, id
 	// Pertahankan rasio alokasi historis, tetapi hitung ulang nominalnya.
 	var pusatIdx, kasIdx = -1, -1
 	var oldTotal, oldPusat int64
+	var countPusat, countKas int
 	for i, a := range h.AlokasiTransaksi {
 		if a.IdTransaksi != idTransaksi {
 			continue
@@ -161,12 +162,16 @@ func (s *wilayahService) UpdatePemasukan(ctx context.Context, idHuria string, id
 		oldTotal += a.Nominal
 		if a.Peruntukan == "Setoran Pusat" {
 			pusatIdx = i
+			countPusat++
 			oldPusat += a.Nominal
 		} else if a.Peruntukan == "Kas Huria" {
 			kasIdx = i
+			countKas++
+		} else {
+			return errors.New("tipe peruntukan alokasi tidak dikenal")
 		}
 	}
-	if pusatIdx < 0 || kasIdx < 0 {
+	if pusatIdx < 0 || kasIdx < 0 || countPusat != 1 || countKas != 1 {
 		return errors.New("alokasi transaksi tidak lengkap; perbaiki alokasi dahulu sebelum mengedit pemasukan")
 	}
 	if oldTotal <= 0 {

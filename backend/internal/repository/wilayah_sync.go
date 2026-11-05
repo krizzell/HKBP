@@ -28,7 +28,7 @@ func (r *wilayahMongo) SyncTree(ctx context.Context) error {
 	}
 	rootID := raw["_id"]
 	tree := &roots[0]
-	dCur, err := r.db.Collection("distrik").Find(ctx, bson.M{"Aktif": true})
+	dCur, err := r.db.Collection("distrik").Find(ctx, bson.M{})
 	if err != nil {
 		return err
 	}
@@ -36,7 +36,7 @@ func (r *wilayahMongo) SyncTree(ctx context.Context) error {
 	if err = dCur.All(ctx, &districts); err != nil {
 		return err
 	}
-	rCur, err := r.db.Collection("resort").Find(ctx, bson.M{"Aktif": true})
+	rCur, err := r.db.Collection("resort").Find(ctx, bson.M{})
 	if err != nil {
 		return err
 	}
@@ -44,7 +44,7 @@ func (r *wilayahMongo) SyncTree(ctx context.Context) error {
 	if err = rCur.All(ctx, &resorts); err != nil {
 		return err
 	}
-	hCur, err := r.db.Collection("huria").Find(ctx, bson.M{"Aktif": true})
+	hCur, err := r.db.Collection("huria").Find(ctx, bson.M{})
 	if err != nil {
 		return err
 	}
@@ -68,6 +68,39 @@ func (r *wilayahMongo) SyncTree(ctx context.Context) error {
 	for _, h := range hurias {
 		if !resortIDs[h.IdResort.Hex()] {
 			return fmt.Errorf("sync ditolak: Huria %s tidak memiliki resort induk aktif", h.Nama)
+		}
+	}
+	// Cegah salinan Resort/Huria pada dua induk bila master sudah pernah dipindah.
+	// Ini pemeriksaan non-destruktif; perpindahan yang aman butuh migrasi tersendiri.
+	docDistriks := make(map[string]domain.DistrikDoc)
+	for _, d := range districts {
+		docDistriks[d.ID.Hex()] = d
+	}
+	docResorts := make(map[string]domain.ResortDoc)
+	for _, res := range resorts {
+		docResorts[res.ID.Hex()] = res
+	}
+	for _, doc := range resorts {
+		target := docDistriks[doc.IdDistrik.Hex()]
+		for _, d := range tree.Pusat.Distrik {
+			for _, res := range d.Resort {
+				identitySame := res.IdResort == doc.ID.Hex() || (res.KodeResort != "" && res.KodeResort == doc.Kode && strings.EqualFold(res.NamaResort, doc.Nama))
+				if identitySame && d.IdDistrik != target.ID.Hex() && d.KodeDistrik != target.Kode && !strings.EqualFold(d.NamaDistrik, target.Nama) {
+					return fmt.Errorf("sinkronisasi ditolak: Resort %s masih berada pada Distrik berbeda; jangan menggandakan data sebelum migrasi pemindahan", doc.Nama)
+				}
+			}
+		}
+	}
+	for _, doc := range hurias {
+		target := docResorts[doc.IdResort.Hex()]
+		for _, d := range tree.Pusat.Distrik {
+			for _, res := range d.Resort {
+				for _, h := range res.Huria {
+					if h.IdHuria == doc.Kode && res.IdResort != target.ID.Hex() && res.KodeResort != target.Kode && !strings.EqualFold(res.NamaResort, target.Nama) {
+						return fmt.Errorf("sinkronisasi ditolak: Huria %s masih berada pada Resort berbeda; jangan menggandakan transaksi", doc.Nama)
+					}
+				}
+			}
 		}
 	}
 	filterRoot := bson.M{"_id": rootID}
@@ -117,7 +150,8 @@ func (r *wilayahMongo) SyncTree(ctx context.Context) error {
 			}
 		}
 		if idx < 0 {
-			newDistrict := domain.Distrik{IdDistrik: doc.ID.Hex(), KodeDistrik: doc.Kode,
+			districtActive := doc.Aktif
+			newDistrict := domain.Distrik{Aktif: &districtActive, IdDistrik: doc.ID.Hex(), KodeDistrik: doc.Kode,
 				NamaDistrik: doc.Nama, NamaPraeses: doc.NamaPraeses, Resort: []domain.Resort{}}
 			if err = apply(bson.M{"$push": bson.M{"Pusat.Distrik": newDistrict}}); err != nil {
 				return err
@@ -131,6 +165,7 @@ func (r *wilayahMongo) SyncTree(ctx context.Context) error {
 				"Pusat.Distrik.$[d].KodeDistrik": doc.Kode,
 				"Pusat.Distrik.$[d].NamaDistrik": doc.Nama,
 				"Pusat.Distrik.$[d].NamaPraeses": doc.NamaPraeses,
+				"Pusat.Distrik.$[d].Aktif":       doc.Aktif,
 			}}
 			if err = apply(update, dFilter(old)); err != nil {
 				return err
@@ -139,6 +174,8 @@ func (r *wilayahMongo) SyncTree(ctx context.Context) error {
 			tree.Pusat.Distrik[idx].KodeDistrik = doc.Kode
 			tree.Pusat.Distrik[idx].NamaDistrik = doc.Nama
 			tree.Pusat.Distrik[idx].NamaPraeses = doc.NamaPraeses
+			status := doc.Aktif
+			tree.Pusat.Distrik[idx].Aktif = &status
 		}
 		distIndex[doc.ID.Hex()] = idx
 	}
@@ -154,7 +191,8 @@ func (r *wilayahMongo) SyncTree(ctx context.Context) error {
 			}
 		}
 		if idx < 0 {
-			newRes := domain.Resort{IdResort: doc.ID.Hex(), KodeResort: doc.Kode, NamaResort: doc.Nama,
+			resortActive := doc.Aktif
+			newRes := domain.Resort{Aktif: &resortActive, IdResort: doc.ID.Hex(), KodeResort: doc.Kode, NamaResort: doc.Nama,
 				NamaPendetaResort: doc.NamaPendetaResort, Huria: []domain.Huria{}}
 			if err = apply(bson.M{"$push": bson.M{"Pusat.Distrik.$[d].Resort": newRes}}, dFilter(*d)); err != nil {
 				return err
@@ -168,6 +206,7 @@ func (r *wilayahMongo) SyncTree(ctx context.Context) error {
 				"Pusat.Distrik.$[d].Resort.$[r].KodeResort":        doc.Kode,
 				"Pusat.Distrik.$[d].Resort.$[r].NamaResort":        doc.Nama,
 				"Pusat.Distrik.$[d].Resort.$[r].NamaPendetaResort": doc.NamaPendetaResort,
+				"Pusat.Distrik.$[d].Resort.$[r].Aktif":             doc.Aktif,
 			}}, dFilter(*d), rFilter(old)); err != nil {
 				return err
 			}
@@ -175,6 +214,8 @@ func (r *wilayahMongo) SyncTree(ctx context.Context) error {
 			d.Resort[idx].KodeResort = doc.Kode
 			d.Resort[idx].NamaResort = doc.Nama
 			d.Resort[idx].NamaPendetaResort = doc.NamaPendetaResort
+			status := doc.Aktif
+			d.Resort[idx].Aktif = &status
 		}
 		resortIndex[doc.ID.Hex()] = [2]int{di, idx}
 	}
@@ -191,6 +232,7 @@ func (r *wilayahMongo) SyncTree(ctx context.Context) error {
 		}
 		profile := bson.M{
 			"Pusat.Distrik.$[d].Resort.$[r].Huria.$[h].NamaHuria":           doc.Nama,
+			"Pusat.Distrik.$[d].Resort.$[r].Huria.$[h].Aktif":               doc.Aktif,
 			"Pusat.Distrik.$[d].Resort.$[r].Huria.$[h].LokasiHuria":         doc.LokasiHuria,
 			"Pusat.Distrik.$[d].Resort.$[r].Huria.$[h].TahunBerdiri":        doc.TahunBerdiri,
 			"Pusat.Distrik.$[d].Resort.$[r].Huria.$[h].NamaPendetaPimpinan": doc.NamaPendetaPimpinan,
@@ -198,7 +240,8 @@ func (r *wilayahMongo) SyncTree(ctx context.Context) error {
 			"Pusat.Distrik.$[d].Resort.$[r].Huria.$[h].KepalaKeluarga":      doc.KepalaKeluarga,
 		}
 		if idx < 0 {
-			h := domain.Huria{IdHuria: doc.Kode, NamaHuria: doc.Nama, LokasiHuria: doc.LokasiHuria,
+			huriaActive := doc.Aktif
+			h := domain.Huria{Aktif: &huriaActive, IdHuria: doc.Kode, NamaHuria: doc.Nama, LokasiHuria: doc.LokasiHuria,
 				TahunBerdiri: doc.TahunBerdiri, NamaPendetaPimpinan: doc.NamaPendetaPimpinan,
 				JumlahJemaat: doc.JumlahJemaat, KepalaKeluarga: doc.KepalaKeluarga,
 				Lunggu: []domain.Lunggu{}, SesiIbadah: []domain.SesiIbadah{},
@@ -216,6 +259,8 @@ func (r *wilayahMongo) SyncTree(ctx context.Context) error {
 				return err
 			}
 			res.Huria[idx].NamaHuria = doc.Nama
+			status := doc.Aktif
+			res.Huria[idx].Aktif = &status
 		}
 	}
 	return nil

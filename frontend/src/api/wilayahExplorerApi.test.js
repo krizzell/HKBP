@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import {
   getWilayahAnak,
   getWilayahDetail,
@@ -10,7 +10,9 @@ import {
   getHuriaWarta,
 } from './wilayahExplorerApi'
 
-describe('wilayahExplorerApi', () => {
+describe('wilayahExplorerApi (mode data demo khusus test)', () => {
+  beforeAll(() => vi.stubEnv('VITE_ENABLE_MOCK_WILAYAH', 'true'))
+  afterAll(() => vi.unstubAllEnvs())
   it('returns at least 6 distriks with long name, inactive, and without leader', async () => {
     const res = await getWilayahAnak({ level: 'distrik' })
     expect(res.data.length).toBeGreaterThanOrEqual(6)

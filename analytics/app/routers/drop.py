@@ -22,6 +22,7 @@ def drop(request: DropRequest) -> dict:
             muat_pemasukan(**kwargs),
             muat_huria(**kwargs),
             kategori=request.kategori,
+            akhir_terpilih=request.akhir,
         )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error

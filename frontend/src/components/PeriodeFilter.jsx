@@ -1,147 +1,92 @@
-/**
- * @file PeriodeFilter.jsx
- * Komponen pemilih mode periode & parameter tanggal/bulan/minggu dinamis.
- * Mode:
- * - Per tahun (pilih tahun, tahun aktif diberi label "(Aktif)")
- * - Per bulan (tahun dan bulan)
- * - Per minggu (tahun dan minggu ISO)
- * - Per tanggal (rentang tanggal Dari & Sampai)
- * Hanya pemilih yang relevan yang tampil.
- */
-
+/** Filter rentang periode tunggal untuk Studio Visualisasi. */
 import { useMemo } from 'react'
+import { defaultRangePeriod, resolvePeriod } from '../lib/periodeRange'
 
-const MONTHS = [
-  { value: '01', label: 'Januari' },
-  { value: '02', label: 'Februari' },
-  { value: '03', label: 'Maret' },
-  { value: '04', label: 'April' },
-  { value: '05', label: 'Mei' },
-  { value: '06', label: 'Juni' },
-  { value: '07', label: 'Juli' },
-  { value: '08', label: 'Agustus' },
-  { value: '09', label: 'September' },
-  { value: '10', label: 'Oktober' },
-  { value: '11', label: 'November' },
-  { value: '12', label: 'Desember' },
-]
+const selectClass = 'w-full h-10 px-2.5 rounded-xl border border-line bg-surface text-ink text-xs font-medium outline-none focus:border-primary focus:ring-2 focus:ring-primary-400/20 cursor-pointer shadow-2xs'
 
-export function PeriodeFilter({ periode, onChange }) {
-  const currentYear = '2026'
-  const years = useMemo(() => ['2026', '2025', '2024'], [])
+export function PeriodeFilter({ periode = {}, onChange }) {
+  const defaults = useMemo(() => defaultRangePeriod(), [])
+  const current = resolvePeriod(periode)
+  const years = useMemo(() => {
+    const yearsSet = new Set(Array.from({ length: 30 }, (_, i) => String(new Date().getFullYear() + 2 - i)))
+    ;[periode.tahunAwal, periode.tahunAkhir, periode.tahun].filter(Boolean).forEach((y) => yearsSet.add(String(y)))
+    return [...yearsSet].sort((a, b) => Number(b) - Number(a))
+  }, [periode.tahunAwal, periode.tahunAkhir, periode.tahun])
+  const startYear = periode.tahunAwal || periode.tahun || defaults.tahun
+  const endYear = periode.tahunAkhir || periode.tahun || startYear
+  const startMonth = periode.bulanAwal || `${startYear}-${String(periode.bulan || defaults.bulan).padStart(2, '0')}`
+  const endMonth = periode.bulanAkhir || startMonth
+  const startDate = periode.startDate || defaults.startDate
+  const endDate = periode.endDate || startDate
 
-  const handleModeChange = (newMode) => {
-    onChange({
-      mode: newMode,
-      tahun: periode.tahun || currentYear,
-      bulan: newMode === 'bulan' ? periode.bulan || '01' : '',
-      mingguISO: newMode === 'minggu' ? periode.mingguISO || '1' : '',
-    })
+  const updateStart = (key, value, endKey, endValue) => {
+    onChange({ [key]: value, ...(value > endValue ? { [endKey]: value } : {}) })
+  }
+  const updateEnd = (key, value, startKey, startValue) => {
+    onChange({ [key]: value, ...(value < startValue ? { [startKey]: value } : {}) })
   }
 
   return (
     <>
-      {/* 1. Mode Periode */}
       <div className="w-full">
-        <label className="block text-xs font-semibold text-muted mb-1 truncate">
-          Mode Periode
-        </label>
-        <select
-          value={periode.mode || 'tahun'}
-          onChange={(e) => handleModeChange(e.target.value)}
-          className="w-full h-10 px-3 rounded-xl border border-line bg-surface text-ink text-xs font-medium outline-none focus:border-primary focus:ring-2 focus:ring-primary-400/20 cursor-pointer shadow-2xs"
-        >
-          <option value="tahun">Per Tahun</option>
-          <option value="bulan">Per Bulan</option>
-          <option value="minggu">Per Minggu</option>
+        <label className="block text-xs font-semibold text-muted mb-1">Mode Periode</label>
+        <select value={periode.mode || 'tahun'} onChange={(e) => onChange({ mode: e.target.value })} className={selectClass}>
+          <option value="tahun">Per Tahun (rentang tahun)</option>
+          <option value="bulan">Per Bulan (rentang bulan)</option>
+          <option value="minggu">Per Minggu (pilih tanggal)</option>
         </select>
       </div>
-
-      {/* 2. Pemilih Periode Spesifik Sesuai Mode */}
-      <div className="w-full">
-        {periode.mode === 'tahun' && (
-          <div>
-            <label className="block text-xs font-semibold text-muted mb-1 truncate">
-              Pilih Tahun
-            </label>
-            <select
-              value={periode.tahun || currentYear}
-              onChange={(e) => onChange({ tahun: e.target.value })}
-              className="w-full h-10 px-3 rounded-xl border border-line bg-surface text-ink text-xs font-medium outline-none focus:border-primary focus:ring-2 focus:ring-primary-400/20 cursor-pointer shadow-2xs"
-            >
-              {years.map((y) => (
-                <option key={y} value={y}>
-                  Tahun {y} {y === currentYear ? '(Aktif)' : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {periode.mode === 'bulan' && (
-          <div className="grid grid-cols-2 gap-1.5">
-            <div>
-              <label className="block text-xs font-semibold text-muted mb-1 truncate">
-                Tahun
-              </label>
-              <select
-                value={periode.tahun || currentYear}
-                onChange={(e) => onChange({ tahun: e.target.value })}
-                className="w-full h-10 px-2.5 rounded-xl border border-line bg-surface text-ink text-xs font-medium outline-none focus:border-primary focus:ring-2 focus:ring-primary-400/20 cursor-pointer shadow-2xs"
-              >
-                {years.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-muted mb-1 truncate">
-                Bulan
-              </label>
-              <select
-                value={periode.bulan || '01'}
-                onChange={(e) => onChange({ bulan: e.target.value })}
-                className="w-full h-10 px-2.5 rounded-xl border border-line bg-surface text-ink text-xs font-medium outline-none focus:border-primary focus:ring-2 focus:ring-primary-400/20 cursor-pointer shadow-2xs"
-              >
-                {MONTHS.map((m) => (
-                  <option key={m.value} value={m.value}>{m.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
-
-        {periode.mode === 'minggu' && (
-          <div className="grid grid-cols-2 gap-1.5">
-            <div>
-              <label className="block text-xs font-semibold text-muted mb-1 truncate">
-                Tahun
-              </label>
-              <select
-                value={periode.tahun || currentYear}
-                onChange={(e) => onChange({ tahun: e.target.value })}
-                className="w-full h-10 px-2.5 rounded-xl border border-line bg-surface text-ink text-xs font-medium outline-none focus:border-primary focus:ring-2 focus:ring-primary-400/20 cursor-pointer shadow-2xs"
-              >
-                {years.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-muted mb-1 truncate">
-                Minggu
-              </label>
-              <select
-                value={periode.mingguISO || '1'}
-                onChange={(e) => onChange({ mingguISO: e.target.value })}
-                className="w-full h-10 px-2.5 rounded-xl border border-line bg-surface text-ink text-xs font-medium outline-none focus:border-primary focus:ring-2 focus:ring-primary-400/20 cursor-pointer shadow-2xs"
-              >
-                {Array.from({ length: 52 }, (_, i) => (
-                  <option key={i + 1} value={String(i + 1)}>W-{i + 1}</option>
-                ))}
-              </select>
-            </div>
-          </div>
+      <div className="min-w-0 w-full">
+        <div className="grid grid-cols-2 gap-2">
+          {current.mode === 'tahun' && (
+            <>
+              <div>
+                <label htmlFor="range-year-start" className="block text-xs font-semibold text-muted mb-1">Dari Tahun</label>
+                <select id="range-year-start" value={startYear} className={selectClass}
+                  onChange={(e) => updateStart('tahunAwal', e.target.value, 'tahunAkhir', endYear)}>
+                  {years.map((year) => <option key={year} value={year}>{year}</option>)}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="range-year-end" className="block text-xs font-semibold text-muted mb-1">Sampai Tahun</label>
+                <select id="range-year-end" value={endYear} className={selectClass}
+                  onChange={(e) => updateEnd('tahunAkhir', e.target.value, 'tahunAwal', startYear)}>
+                  {years.map((year) => <option key={year} value={year}>{year}</option>)}
+                </select>
+              </div>
+            </>
+          )}
+          {current.mode === 'bulan' && (
+            <>
+              <div>
+                <label htmlFor="range-month-start" className="block text-xs font-semibold text-muted mb-1">Dari Bulan</label>
+                <input id="range-month-start" type="month" className={selectClass} value={startMonth}
+                  onChange={(e) => e.target.value && updateStart('bulanAwal', e.target.value, 'bulanAkhir', endMonth)} />
+              </div>
+              <div>
+                <label htmlFor="range-month-end" className="block text-xs font-semibold text-muted mb-1">Sampai Bulan</label>
+                <input id="range-month-end" type="month" className={selectClass} value={endMonth}
+                  onChange={(e) => e.target.value && updateEnd('bulanAkhir', e.target.value, 'bulanAwal', startMonth)} />
+              </div>
+            </>
+          )}
+          {current.mode === 'minggu' && (
+            <>
+              <div>
+                <label htmlFor="range-week-start" className="block text-xs font-semibold text-muted mb-1">Dari Tanggal</label>
+                <input id="range-week-start" type="date" className={selectClass} value={startDate}
+                  onChange={(e) => e.target.value && updateStart('startDate', e.target.value, 'endDate', endDate)} />
+              </div>
+              <div>
+                <label htmlFor="range-week-end" className="block text-xs font-semibold text-muted mb-1">Sampai Tanggal</label>
+                <input id="range-week-end" type="date" className={selectClass} value={endDate}
+                  onChange={(e) => e.target.value && updateEnd('endDate', e.target.value, 'startDate', startDate)} />
+              </div>
+            </>
+          )}
+        </div>
+        {current.mode === 'minggu' && (
+          <p className="mt-1 text-[11px] text-muted">Otomatis dihitung per minggu (Senin–Minggu): {current.start} s.d. {current.end}</p>
         )}
       </div>
     </>

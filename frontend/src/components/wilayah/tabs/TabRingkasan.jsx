@@ -220,7 +220,7 @@ export function TabRingkasan({ church }) {
           </div>
           <div>
             <div className="text-2xl font-extrabold text-ink tabular-nums tracking-tight leading-tight truncate">
-              {formatNumber(rataKehadiran)} <span className="text-sm font-semibold text-muted">jiwa</span>
+              {rataKehadiran == null ? 'Belum ada data' : formatNumber(rataKehadiran)} {rataKehadiran == null ? '' : <span className="text-sm font-semibold text-muted">jiwa</span>}
             </div>
             <div className="flex items-center gap-2 mt-2.5">
               <span className="inline-flex items-center gap-1 bg-amber-500/15 text-amber-700 border border-amber-500/30 text-xs font-bold px-2 py-0.5 rounded-full">

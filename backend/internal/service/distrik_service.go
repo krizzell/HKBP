@@ -203,7 +203,7 @@ func (s *distrikService) Delete(ctx context.Context, id string) error {
 	}
 
 	// 1. Pastikan distrik ada
-	_, err = s.repo.FindByID(ctx, objID)
+	doc, err := s.repo.FindByID(ctx, objID)
 	if err != nil {
 		return err
 	}
@@ -227,13 +227,15 @@ func (s *distrikService) Delete(ctx context.Context, id string) error {
 		return domain.ErrDistrikHasResort
 	}
 
-	// 4. Hapus permanen jika tidak memiliki resort sama sekali
-	if err := s.repo.Delete(ctx, objID); err != nil {
+	// 4. Arsipkan jika tidak memiliki resort sama sekali
+	doc.Aktif = false
+	doc.DiubahPada = time.Now().UTC()
+	if err := s.repo.Update(ctx, objID, doc); err != nil {
 		return err
 	}
 	if s.wilayahRepo != nil {
 		if err := s.wilayahRepo.SyncTree(ctx); err != nil {
-			return fmt.Errorf("master terhapus, tetapi sinkronisasi hierarki gagal: %w", err)
+			return fmt.Errorf("master diarsipkan, tetapi sinkronisasi hierarki gagal: %w", err)
 		}
 	}
 	return nil
