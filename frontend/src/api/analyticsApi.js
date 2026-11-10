@@ -6,4 +6,4 @@ export const runAnomalyApi = (payload) => client.post('/analytics/anomaly', payl
 
 export const runCorrelationApi = (payload) => client.post('/analytics/correlation', payload)
 
-export const runDropReportApi = (payload) => client.post('/analytics/drop', payload)
+export const runDropReportApi = (payload = {}) => client.post('/analytics/drop', payload)

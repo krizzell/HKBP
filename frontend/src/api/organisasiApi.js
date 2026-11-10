@@ -65,6 +65,25 @@ export const MOCK_ORGANISASI_DATA = {
   ],
 }
 
+function identityKey(item, level) {
+  const parent = String(item.idInduk || '').trim().toLowerCase()
+  const name = String(item.nama || '').trim().toLowerCase()
+  return `${level}:${parent}:${name}`
+}
+
+export function dedupeOrganisasiOptions(items, level) {
+  const seen = new Set()
+  return (Array.isArray(items) ? items : []).filter((item) => {
+    const id = String(item.id || '').trim()
+    const key = id ? `${level}:id:${id}` : identityKey(item, level)
+    const fallbackKey = identityKey(item, level)
+    if (seen.has(key) || (fallbackKey !== `${level}::` && seen.has(fallbackKey))) return false
+    seen.add(key)
+    seen.add(fallbackKey)
+    return true
+  })
+}
+
 /**
  * Helper untuk mengekstrak opsi dari data wilayah live jika tersedia.
  */
@@ -119,9 +138,9 @@ export function extractOptionsFromWilayahData(wilayahData) {
   })
 
   return {
-    distrik: resDistrik,
-    resort: resResort,
-    huria: resHuria,
+    distrik: dedupeOrganisasiOptions(resDistrik, 'distrik'),
+    resort: dedupeOrganisasiOptions(resResort, 'resort'),
+    huria: dedupeOrganisasiOptions(resHuria, 'huria'),
   }
 }
 

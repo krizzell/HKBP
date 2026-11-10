@@ -57,3 +57,38 @@ def test_loader_warns_and_uses_composite_id_for_missing_id():
 def test_loader_rejects_invalid_id_filter(ids, message):
     with pytest.raises(ValueError, match=message):
         muat_huria(load_fixture(), ids)
+
+
+def test_loader_uses_only_active_huria_in_active_wilayah_without_duplicates():
+    source = [{
+        "Pusat": {
+            "Distrik": [
+                {
+                    "IdDistrik": "D-1",
+                    "NamaDistrik": "Distrik Aktif",
+                    "Resort": [{
+                        "IdResort": "R-1",
+                        "NamaResort": "Resort Aktif",
+                        "Huria": [
+                            {"IdHuria": "H-1", "NamaHuria": "Huria Aktif", "Aktif": True},
+                            {"IdHuria": "H-1", "NamaHuria": "Huria Duplikat", "Aktif": True},
+                            {"IdHuria": "H-2", "NamaHuria": "Huria Nonaktif", "Aktif": False},
+                        ],
+                    }],
+                },
+                {
+                    "NamaDistrik": "Distrik Nonaktif",
+                    "Aktif": False,
+                    "Resort": [{
+                        "NamaResort": "Resort Nonaktif",
+                        "Huria": [{"IdHuria": "H-3", "NamaHuria": "Huria Nonaktif"}],
+                    }],
+                },
+            ],
+        },
+    }]
+
+    frame = muat_huria(source, ["H-1", "H-2", "H-3"])
+
+    assert frame["idHuria"].tolist() == ["H-1"]
+    assert frame.loc[0, "namaHuria"] == "Huria Aktif"

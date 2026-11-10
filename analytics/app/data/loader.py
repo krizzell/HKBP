@@ -41,15 +41,26 @@ def _date(value):
     return pd.to_datetime(value, errors="coerce")
 
 
+def _aktif(value) -> bool:
+    return value not in (False, 0, "0", "false", "False", "inactive")
+
+
 def _hurias(source=None) -> list[dict]:
     result = []
+    seen = set()
     for document in _documents(source):
         pusat = document.get("Pusat", {})
         for distrik in _list(pusat.get("Distrik")):
+            if not _aktif(distrik.get("Aktif", True)):
+                continue
             nama_distrik = distrik.get("NamaDistrik", "")
             for resort in _list(distrik.get("Resort")):
+                if not _aktif(resort.get("Aktif", True)):
+                    continue
                 nama_resort = resort.get("NamaResort", "")
                 for huria in _list(resort.get("Huria")):
+                    if not _aktif(huria.get("Aktif", True)):
+                        continue
                     id_huria = huria.get("IdHuria")
                     if not id_huria:
                         id_huria = "|".join((nama_distrik, nama_resort, huria.get("NamaHuria", "")))
@@ -58,9 +69,13 @@ def _hurias(source=None) -> list[dict]:
                             UserWarning,
                             stacklevel=2,
                         )
+                    id_huria = str(id_huria)
+                    if id_huria in seen:
+                        continue
+                    seen.add(id_huria)
                     result.append({
                         "_raw": huria,
-                        "idHuria": str(id_huria),
+                        "idHuria": id_huria,
                         "namaHuria": huria.get("NamaHuria", ""),
                         "namaResort": nama_resort,
                         "namaDistrik": nama_distrik,
@@ -69,12 +84,16 @@ def _hurias(source=None) -> list[dict]:
     return result
 
 
-def _validate_filter(id_huria: Iterable[str], mulai=None, akhir=None):
+def semua_id_huria(source=None) -> list[str]:
+    return sorted({huria["idHuria"] for huria in _hurias(source)})
+
+
+def _validate_filter(id_huria: Iterable[str], mulai=None, akhir=None, max_ids=500):
     requested_ids = [str(item) for item in id_huria if item not in (None, "")]
     ids = set(requested_ids)
     if not ids:
         raise ValueError("idHuria wajib diisi")
-    if len(requested_ids) > 500:
+    if max_ids is not None and len(requested_ids) > max_ids:
         raise ValueError("idHuria maksimal 500")
     start = pd.Timestamp(mulai) if mulai else None
     end = pd.Timestamp(akhir) if akhir else None
@@ -87,8 +106,8 @@ def _validate_filter(id_huria: Iterable[str], mulai=None, akhir=None):
     return ids, start, end
 
 
-def _selected_hurias(source, id_huria, mulai=None, akhir=None):
-    ids, start, end = _validate_filter(id_huria, mulai, akhir)
+def _selected_hurias(source, id_huria, mulai=None, akhir=None, max_ids=500):
+    ids, start, end = _validate_filter(id_huria, mulai, akhir, max_ids)
     return [huria for huria in _hurias(source) if huria["idHuria"] in ids], start, end
 
 
@@ -113,18 +132,18 @@ def _apply_date_filter(frame: pd.DataFrame, mulai, akhir) -> pd.DataFrame:
     return result.reset_index(drop=True)
 
 
-def muat_huria(source=None, id_huria=None, mulai=None, akhir=None) -> pd.DataFrame:
+def muat_huria(source=None, id_huria=None, mulai=None, akhir=None, max_ids=500) -> pd.DataFrame:
     if id_huria is None:
         raise ValueError("idHuria wajib diisi")
-    hurias, _, _ = _selected_hurias(source, id_huria, mulai, akhir)
+    hurias, _, _ = _selected_hurias(source, id_huria, mulai, akhir, max_ids)
     return _frame(
         [{key: value for key, value in huria.items() if key != "_raw"} for huria in hurias],
         WILAYAH_COLUMNS + ["jumlahJemaat"],
     )
 
 
-def _muat_nested(source, id_huria, field, fields, mulai=None, akhir=None, tanggal_kolom="tanggal") -> pd.DataFrame:
-    hurias, start, end = _selected_hurias(source, id_huria, mulai, akhir)
+def _muat_nested(source, id_huria, field, fields, mulai=None, akhir=None, tanggal_kolom="tanggal", max_ids=500) -> pd.DataFrame:
+    hurias, start, end = _selected_hurias(source, id_huria, mulai, akhir, max_ids)
     records = []
     for huria in hurias:
         for item in _list(huria["_raw"].get(field)):
@@ -186,10 +205,10 @@ def muat_pelean(source=None, id_huria=None, mulai=None, akhir=None) -> pd.DataFr
     return frame
 
 
-def muat_pemasukan(source=None, id_huria=None, mulai=None, akhir=None) -> pd.DataFrame:
-    frame = _muat_nested(source, id_huria, "PemasukanJemaat", WILAYAH_COLUMNS + ["idTransaksi", "tanggal", "nominal", "idKategori", "keterangan", "mingguISO"], mulai, akhir)
+def muat_pemasukan(source=None, id_huria=None, mulai=None, akhir=None, max_ids=500) -> pd.DataFrame:
+    frame = _muat_nested(source, id_huria, "PemasukanJemaat", WILAYAH_COLUMNS + ["idTransaksi", "tanggal", "nominal", "idKategori", "keterangan", "mingguISO"], mulai, akhir, max_ids=max_ids)
     if not frame.empty:
-        kategori = muat_kategori(source, id_huria)
+        kategori = muat_kategori(source, id_huria, max_ids=max_ids)
         names = (kategori.drop_duplicates(["idHuria", "idKategori"])
                  .set_index(["idHuria", "idKategori"])["namaKategori"].to_dict()) if not kategori.empty else {}
         frame["namaKategori"] = [names.get((row.idHuria, row.idKategori), "") for row in frame.itertuples()]
@@ -232,5 +251,5 @@ def muat_rincian_setoran(source=None, id_huria=None, mulai=None, akhir=None) -> 
 
 
 
-def muat_kategori(source=None, id_huria=None, mulai=None, akhir=None) -> pd.DataFrame:
-    return _muat_nested(source, id_huria, "KategoriPemasukan", WILAYAH_COLUMNS + ["idKategori", "namaKategori", "idKategoriInduk"], mulai, akhir)
+def muat_kategori(source=None, id_huria=None, mulai=None, akhir=None, max_ids=500) -> pd.DataFrame:
+    return _muat_nested(source, id_huria, "KategoriPemasukan", WILAYAH_COLUMNS + ["idKategori", "namaKategori", "idKategoriInduk"], mulai, akhir, max_ids=max_ids)

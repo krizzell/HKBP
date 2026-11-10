@@ -29,6 +29,7 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  Info,
 } from 'lucide-react'
 import { formatRupiah, formatCompactRupiah, exportToCSV } from '../utils/formatters'
 import {
@@ -48,7 +49,6 @@ import { getAvailableChartTypeIds } from '../lib/chartRecommendations'
 import { useOrganisasiFilter } from '../hooks/useOrganisasiFilter'
 import { OrganisasiFilterBar } from '../components/OrganisasiFilterBar'
 import { PeriodeFilter } from '../components/PeriodeFilter'
-import { PythonAnalyticsPanel } from '../components/PythonAnalyticsPanel'
 import { resolvePeriod } from '../lib/periodeRange'
 
 const CHART_PALETTE = [
@@ -272,6 +272,7 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
     const dList = []
     const rList = []
     const hList = []
+    const seenHuriaIdentities = new Set()
 
     distriks.forEach((d) => {
       if (d.Aktif === false) return
@@ -287,9 +288,14 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
                 resortName: res.NamaResort,
                 huriaName: h.NamaHuria,
               }
-              resortHurias.push(enrichedHuria)
-              distrikHurias.push(enrichedHuria)
-              hList.push(enrichedHuria)
+              const identity = `${String(res.IdResort || res.NamaResort).trim().toLowerCase()}:${String(h.NamaHuria || '').trim().toLowerCase()}`
+              if (!seenHuriaIdentities.has(identity)) {
+                seenHuriaIdentities.add(identity)
+                const uniqueHuria = { ...enrichedHuria, _identity: identity }
+                resortHurias.push(uniqueHuria)
+                distrikHurias.push(uniqueHuria)
+                hList.push(uniqueHuria)
+              }
             })
           rList.push({
             id: res.IdResort || res.NamaResort,
@@ -596,6 +602,25 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
     [availableChartTypeIds, metric],
   )
 
+  const chartLimitations = useMemo(() => {
+    const limitations = []
+
+    if (chartData.length < 2) {
+      limitations.push('Grafik garis dan area membutuhkan data minimal 2 periode.')
+    }
+    if (series.length < 2) {
+      limitations.push('Stacked bar dan heatmap membutuhkan lebih dari 1 seri data.')
+    }
+    if (metric === 'AVG') {
+      limitations.push('Pie dan treemap tidak tersedia saat metrik Rata-rata dipilih.')
+    }
+    if (availableChartTypes.length === 0) {
+      limitations.push('Belum ada tipe grafik yang dapat digunakan. Periksa pilihan wilayah, periode, dan sumber data.')
+    }
+
+    return limitations
+  }, [availableChartTypes.length, chartData.length, metric, series.length])
+
   useEffect(() => {
     if (availableChartTypes.length > 0 && !availableChartTypes.some((t) => t.id === chartType)) {
       setChartType(availableChartTypes[0].id)
@@ -786,10 +811,6 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
   }
 
   const isMultiEntity = comparedEntities.length >= 2
-  const analyticsHuriaIds = useMemo(
-    () => [...new Set(comparedEntities.flatMap((entity) => entity.hurias.map((huria) => huria.IdHuria).filter(Boolean).map(String)))],
-    [comparedEntities]
-  )
 
   return (
     <div className="flex flex-col gap-5 w-full font-sans">
@@ -862,13 +883,6 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
         </aside>
 
         <main className="min-w-0 lg:col-span-7 flex flex-col gap-5">
-          {comparedEntities.length > 0 && dataSource.startsWith('pemasukan') && (
-            <PythonAnalyticsPanel
-              idHuria={analyticsHuriaIds}
-              kategori={dataSource.startsWith('pemasukan::') ? dataSource.split('::')[1] : undefined}
-              periode={organisasiFilter.periode}
-            />
-          )}
           {/* 3. VISUALIZATION CANVAS & METRICS ATAU EMPTY STATE */}
           {comparedEntities.length === 0 ? (
             <div className="bg-surface rounded-2xl border border-line p-10 sm:p-14 text-center flex flex-col items-center justify-center gap-3.5 shadow-xs w-full min-h-[360px]">
@@ -1008,6 +1022,22 @@ export const StudioVisualisasiPage = ({ wilayahData = [], filters = {}, onFilter
                     }`}
                   />
                 </button>
+                {chartLimitations.length > 0 && (
+                  <div
+                    role="status"
+                    className="mt-2 flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-2.5 py-2 text-[10px] leading-relaxed text-warning-700"
+                  >
+                    <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning-600" />
+                    <div>
+                      <p className="font-bold">Batasan grafik untuk data terpilih</p>
+                      <ul className="mt-0.5 list-disc pl-3.5">
+                        {chartLimitations.map((limitation) => (
+                          <li key={limitation}>{limitation}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
 
                 {/* Dropdown Menu Ala Tableau */}
                 {chartDropdownOpen && (

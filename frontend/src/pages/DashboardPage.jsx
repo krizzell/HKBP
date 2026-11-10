@@ -16,6 +16,7 @@ import {
 import { formatRupiah, formatCompactRupiah, formatDate, exportToCSV } from '../utils/formatters'
 import { SvgLineChart } from '../components/charts/InteractiveCharts'
 import { Button } from '../components/ui'
+import { PythonAnalyticsPanel } from '../components/PythonAnalyticsPanel'
 
 // Helper pembersih & standarisasi nama kategori penerimaan HKBP
 const cleanCategoryName = (rawName) => {
@@ -524,8 +525,9 @@ export const DashboardPage = ({ wilayahData = [], onNavigateTab }) => {
           </div>
         </div>
 
-        {/* KARTU KANAN: PERINGKAT KATEGORI PEMASUKAN */}
-        <div className="bg-surface border border-line rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col">
+        <div className="flex flex-col gap-6">
+          {/* KARTU KANAN: PERINGKAT KATEGORI PEMASUKAN */}
+          <div className="bg-surface border border-line rounded-2xl p-5 sm:p-6 shadow-xs flex flex-col">
           <div className="mb-4">
             <h3 className="text-base font-bold text-ink">
               Peringkat Kategori Pemasukan
@@ -575,14 +577,17 @@ export const DashboardPage = ({ wilayahData = [], onNavigateTab }) => {
                           backgroundColor: barColors[idx % barColors.length],
                         }}
                       />
+                      </div>
                     </div>
-                  </div>
                 )
               })
             )}
           </div>
         </div>
       </div>
+      </div>
+
+      <PythonAnalyticsPanel globalReport wilayahData={wilayahData} />
 
       {/* 4. SUMMARY TABLE CARD AT BOTTOM */}
       <div className="bg-surface border border-line rounded-2xl p-5 sm:p-6 shadow-xs w-full">

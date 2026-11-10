@@ -25,7 +25,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import { FilterSummary } from './FilterSummary'
-import { getOrganisasiOptions } from '../api/organisasiApi'
+import { dedupeOrganisasiOptions, getOrganisasiOptions } from '../api/organisasiApi'
 import { getResortList, getHuriaList } from '../api/masterWilayahApi'
 
 // Jeda debounce hover (80ms) agar gerakan kursor cepat tidak memicu layout shift mendadak,
@@ -345,14 +345,19 @@ export function OrganisasiFilterBar({ filterState }) {
     const allD = options.distrik || []
 
     // 1. Gabungkan opsi resort
-    const combinedResorts = [...(options.resort || [])]
+    const combinedResorts = dedupeOrganisasiOptions(options.resort || [], 'resort')
     const seenResortIds = new Set(combinedResorts.map((r) => String(r.id)))
+    const seenResortKeys = new Set(
+      combinedResorts.map((r) => `resort:${String(r.idInduk || '').trim().toLowerCase()}:${String(r.nama || '').trim().toLowerCase()}`)
+    )
     Object.values(fetchedResorts).forEach((arr) => {
       if (Array.isArray(arr)) {
         arr.forEach((r) => {
           const sId = String(r.id)
-          if (!seenResortIds.has(sId)) {
+          const identity = `resort:${String(r.idInduk || '').trim().toLowerCase()}:${String(r.nama || '').trim().toLowerCase()}`
+          if (!seenResortIds.has(sId) && !seenResortKeys.has(identity)) {
             seenResortIds.add(sId)
+            seenResortKeys.add(identity)
             combinedResorts.push(r)
           }
         })
@@ -360,14 +365,19 @@ export function OrganisasiFilterBar({ filterState }) {
     })
 
     // 2. Gabungkan opsi huria
-    const combinedHurias = [...(options.huria || [])]
+    const combinedHurias = dedupeOrganisasiOptions(options.huria || [], 'huria')
     const seenHuriaIds = new Set(combinedHurias.map((h) => String(h.id)))
+    const seenHuriaKeys = new Set(
+      combinedHurias.map((h) => `huria:${String(h.idInduk || '').trim().toLowerCase()}:${String(h.nama || '').trim().toLowerCase()}`)
+    )
     Object.values(fetchedHurias).forEach((arr) => {
       if (Array.isArray(arr)) {
         arr.forEach((h) => {
           const sId = String(h.id)
-          if (!seenHuriaIds.has(sId)) {
+          const identity = `huria:${String(h.idInduk || '').trim().toLowerCase()}:${String(h.nama || '').trim().toLowerCase()}`
+          if (!seenHuriaIds.has(sId) && !seenHuriaKeys.has(identity)) {
             seenHuriaIds.add(sId)
+            seenHuriaKeys.add(identity)
             combinedHurias.push(h)
           }
         })
