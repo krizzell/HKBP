@@ -1,6 +1,6 @@
 # Model Card - Prediksi Pelean Sesi Ibadah HKBP
 
-*Dibuat otomatis oleh `app/ml/train.py` pada 2026-11-11T02:29:59+00:00*
+*Dibuat otomatis oleh `app/ml/train.py` pada 2026-11-11T07:09:12+00:00*
 
 ## 1. Tujuan
 Memprediksi **total pelean (Rp) sebuah sesi ibadah** sebelum sesi berlangsung, agar bendahara Huria dan pengurus resort/distrik dapat merencanakan kas Huria dan kewajiban Setoran Pusat. Tugas: **regresi** (target numerik).
