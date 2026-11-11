@@ -2,6 +2,7 @@ package handler
 
 import (
 	"HKBP/internal/domain"
+	"HKBP/internal/middleware"
 	"net/http"
 	"strings"
 
@@ -17,44 +18,27 @@ func NewWilayahHandler(svc domain.WilayahService, repo domain.WilayahRepository)
 	return &WilayahHandler{svc: svc, repo: repo}
 }
 
-// getCurrentUser mengambil metadata pengguna dari header request atau token otentikasi
+// getCurrentUser mengambil identitas pengguna dari JWT yang sudah diverifikasi middleware Authenticate.
+// Header X-User-* TIDAK lagi dipercaya karena dapat dipalsukan oleh klien.
 func (h *WilayahHandler) getCurrentUser(c *gin.Context) *domain.User {
-	role := c.GetHeader("X-User-Role")
-	email := c.GetHeader("X-User-Email")
-	idHuria := c.GetHeader("X-User-Huria")
-
-	if role == "" {
-		authHeader := c.GetHeader("Authorization")
-		if strings.Contains(authHeader, "superadmin") || strings.Contains(authHeader, "pusat") {
-			role = "SuperAdmin"
-			email = "pusat@hkbp.or.id"
-		} else if strings.Contains(authHeader, "pearaja") || strings.Contains(authHeader, "2111") {
-			role = "Admin"
-			email = "admin.pearaja@hkbp.or.id"
-			idHuria = "H-2.1.1"
-		} else if strings.Contains(authHeader, "1111") || strings.Contains(authHeader, "sudirman") || strings.Contains(authHeader, "admin") {
-			role = "Admin"
-			email = "admin.sudirman@hkbp.or.id"
-			idHuria = "H-1.1.1"
-		}
+	claims, ok := middleware.ClaimsFrom(c)
+	if !ok {
+		return nil
 	}
 
-	if email != "" {
-		u, err := h.repo.FindUserByEmail(c.Request.Context(), email)
+	if claims.Email != "" {
+		u, err := h.repo.FindUserByEmail(c.Request.Context(), claims.Email)
 		if err == nil && u != nil {
 			return u
 		}
 	}
 
-	if role != "" {
-		return &domain.User{
-			Role:    role,
-			Email:   email,
-			IdHuria: idHuria,
-		}
+	return &domain.User{
+		Role:      claims.Role,
+		Email:     claims.Email,
+		IdHuria:   claims.IdHuria,
+		NamaHuria: claims.NamaHuria,
 	}
-
-	return nil
 }
 
 func (h *WilayahHandler) getHuriaID(c *gin.Context) string {

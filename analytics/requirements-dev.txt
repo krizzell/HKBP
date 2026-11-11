@@ -1,3 +1,9 @@
 -r requirements.txt
 pytest>=8,<10
 httpx2>=0.1
+# EDA, notebook, dan tes EDA
+tabulate>=0.9
+matplotlib>=3.8
+nbformat>=5.10
+nbclient>=0.10
+ipykernel>=6.29

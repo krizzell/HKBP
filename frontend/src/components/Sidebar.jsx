@@ -11,6 +11,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Layers,
+  BookOpenText,
+  BrainCircuit,
 } from 'lucide-react'
 
 export const Sidebar = ({
@@ -40,6 +42,18 @@ export const Sidebar = ({
       id: 'studio',
       label: 'Visualisasi',
       icon: BarChart3,
+      roles: ['SuperAdmin', 'Admin'],
+    },
+    {
+      id: 'storytelling',
+      label: 'Storytelling',
+      icon: BookOpenText,
+      roles: ['SuperAdmin', 'Admin'],
+    },
+    {
+      id: 'model',
+      label: 'Prediksi Pelean (ML)',
+      icon: BrainCircuit,
       roles: ['SuperAdmin', 'Admin'],
     },
     {

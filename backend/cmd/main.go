@@ -8,6 +8,7 @@ import (
 	"HKBP/internal/router"
 	"HKBP/internal/service"
 	"log"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -19,6 +20,16 @@ func main() {
 
 	cfg := config.Load()
 
+	// JWT_SECRET wajib di luar mode dev agar token tidak dapat dipalsukan.
+	if cfg.JWTSecret == "" {
+		if strings.EqualFold(cfg.AppEnv, "dev") {
+			log.Println("PERINGATAN: JWT_SECRET kosong, memakai secret dev (JANGAN dipakai di production)")
+			cfg.JWTSecret = "dev-only-insecure-secret-change-me"
+		} else {
+			log.Fatal("JWT_SECRET wajib diisi saat APP_ENV bukan dev")
+		}
+	}
+
 	db, err := database.Connect(cfg.MongoURI, cfg.MongoDB)
 	if err != nil {
 		log.Fatal("gagal konek MongoDB: ", err)
@@ -28,7 +39,7 @@ func main() {
 	wilayahRepo := repository.NewWilayahRepository(db)
 	wilayahSvc := service.NewWilayahService(wilayahRepo)
 	wilayahHandler := handler.NewWilayahHandler(wilayahSvc, wilayahRepo)
-	authHandler := handler.NewAuthHandler(wilayahSvc, wilayahRepo)
+	authHandler := handler.NewAuthHandler(wilayahSvc, wilayahRepo, cfg)
 
 	distrikRepo := repository.NewDistrikRepository(db)
 	distrikSvc := service.NewDistrikService(distrikRepo, wilayahRepo)

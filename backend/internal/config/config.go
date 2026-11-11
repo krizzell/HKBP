@@ -1,15 +1,20 @@
 package config
 
-import "os"
+import (
+	"os"
+	"strconv"
+)
 
 type Config struct {
 	Port         string
 	MongoURI     string
 	MongoDB      string
-	FrontendURL  string
+	FrontendURL  string // boleh lebih dari satu, pisahkan dengan koma
 	AppEnv       string
 	AnalyticsURL string
 	AnalyticsKey string
+	JWTSecret    string
+	JWTTTLHours  int
 }
 
 func Load() Config {
@@ -20,6 +25,10 @@ func Load() Config {
 	if analyticsKey == "" {
 		analyticsKey = get("INTERNAL_KEY", "")
 	}
+	ttl, err := strconv.Atoi(get("JWT_TTL_HOURS", "12"))
+	if err != nil || ttl <= 0 {
+		ttl = 12
+	}
 	return Config{
 		Port:         get("PORT", "8081"),
 		MongoURI:     get("MONGO_URI", "mongodb://localhost:27017"),
@@ -28,6 +37,8 @@ func Load() Config {
 		AppEnv:       get("APP_ENV", "dev"),
 		AnalyticsURL: get("ANALYTICS_URL", "http://127.0.0.1:8000"),
 		AnalyticsKey: analyticsKey,
+		JWTSecret:    get("JWT_SECRET", ""),
+		JWTTTLHours:  ttl,
 	}
 }
 

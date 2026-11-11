@@ -10,6 +10,35 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// corsMiddleware hanya mengizinkan origin frontend yang terdaftar (FRONTEND_URL, boleh dipisah koma).
+// Pada APP_ENV=dev, localhost juga diizinkan.
+func corsMiddleware(cfg config.Config) gin.HandlerFunc {
+	allowed := map[string]bool{}
+	for _, origin := range strings.Split(cfg.FrontendURL, ",") {
+		origin = strings.TrimRight(strings.TrimSpace(origin), "/")
+		if origin != "" {
+			allowed[origin] = true
+		}
+	}
+	isDev := strings.EqualFold(cfg.AppEnv, "dev")
+
+	return func(c *gin.Context) {
+		origin := c.Request.Header.Get("Origin")
+		if origin != "" && (allowed[origin] ||
+			(isDev && (strings.HasPrefix(origin, "http://localhost") || strings.HasPrefix(origin, "http://127.0.0.1")))) {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			c.Writer.Header().Set("Vary", "Origin")
+			c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept, Cache-Control, X-Requested-With")
+			c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		}
+		if c.Request.Method == http.MethodOptions {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+		c.Next()
+	}
+}
+
 func New(
 	cfg config.Config,
 	wilayah *handler.WilayahHandler,
@@ -21,133 +50,124 @@ func New(
 ) *gin.Engine {
 	r := gin.Default()
 	_ = r.SetTrustedProxies(nil)
+	r.Use(corsMiddleware(cfg))
 
-	r.Use(func(c *gin.Context) {
-		origin := c.Request.Header.Get("Origin")
-		if origin == "" {
-			origin = "*"
-		}
-		c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With, X-User-Role, X-User-Email, X-User-Huria, X-Dev-Role")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-		c.Next()
-	})
+	superAdmin := middleware.RequireRole(cfg, "SUPER_ADMIN", "SuperAdmin")
+	operator := middleware.RequireRole(cfg, "Admin", "SuperAdmin", "SUPER_ADMIN")
 
 	api := r.Group("/api")
 	{
+		// ---- Rute publik (satu-satunya yang tanpa token)
 		api.GET("/health", func(c *gin.Context) {
 			c.JSON(200, gin.H{"status": "ok", "version": "v2"})
 		})
+		api.POST("/auth/login", auth.Login)
 
-		analyticsGroup := api.Group("/analytics")
+		// ---- Semua rute lain WAJIB membawa JWT yang valid
+		secured := api.Group("")
+		secured.Use(middleware.Authenticate(cfg))
 		{
-			analyticsGroup.POST("/forecast", analytics.Forecast)
-			analyticsGroup.POST("/anomaly", analytics.Anomaly)
-			analyticsGroup.POST("/correlation", analytics.Correlation)
-			analyticsGroup.POST("/drop", analytics.Drop)
-		}
+			secured.GET("/auth/me", auth.Me)
 
-		// Auth
-		authGroup := api.Group("/auth")
-		{
-			authGroup.POST("/login", auth.Login)
-			authGroup.GET("/me", auth.Me)
-		}
-
-		// Distrik CRUD
-		distrikGroup := api.Group("/distrik")
-		{
-			distrikGroup.GET("", distrik.GetAll)
-			distrikGroup.GET("/:id", distrik.GetByID)
-			distrikGroup.POST("", middleware.RequireRole(cfg, "SUPER_ADMIN", "SuperAdmin"), distrik.Create)
-			distrikGroup.PUT("/:id", middleware.RequireRole(cfg, "SUPER_ADMIN", "SuperAdmin"), distrik.Update)
-			distrikGroup.DELETE("/:id", middleware.RequireRole(cfg, "SUPER_ADMIN", "SuperAdmin"), distrik.Delete)
-		}
-
-		// Resort CRUD
-		resortGroup := api.Group("/resort")
-		{
-			resortGroup.GET("", resort.GetAll)
-			resortGroup.GET("/:id", resort.GetByID)
-			resortGroup.POST("", middleware.RequireRole(cfg, "SUPER_ADMIN", "SuperAdmin"), resort.Create)
-			resortGroup.PUT("/:id", middleware.RequireRole(cfg, "SUPER_ADMIN", "SuperAdmin"), resort.Update)
-			resortGroup.DELETE("/:id", middleware.RequireRole(cfg, "SUPER_ADMIN", "SuperAdmin"), resort.Delete)
-		}
-
-		// Wilayah & Seeder
-		api.GET("/wilayah", wilayah.GetAll)
-		api.POST("/wilayah/sync", wilayah.SyncTree)
-		api.POST("/seeder/reset", wilayah.ResetSeeder)
-
-		// Huria CRUD & Operasional Keuangan
-		huriaGroup := api.Group("/huria")
-		{
-			huriaGroup.GET("", huria.GetAll)
-			huriaGroup.POST("", middleware.RequireRole(cfg, "SUPER_ADMIN", "SuperAdmin"), huria.Create)
-
-			huriaItem := huriaGroup.Group("/:id")
+			// Analitik Python: statistik, data warehouse, dan model ML
+			analyticsGroup := secured.Group("/analytics")
 			{
-				huriaItem.GET("", func(c *gin.Context) {
-					idHuria := c.Param("id")
-					if doc, err := huria.GetService().GetByID(c.Request.Context(), idHuria); err == nil && doc != nil {
-						c.JSON(http.StatusOK, gin.H{"data": doc})
-						return
-					}
-					wilayah.GetHuria(c)
-				})
+				analyticsGroup.POST("/forecast", analytics.Forecast)
+				analyticsGroup.POST("/anomaly", analytics.Anomaly)
+				analyticsGroup.POST("/correlation", analytics.Correlation)
+				analyticsGroup.POST("/drop", analytics.Drop)
 
-				huriaItem.PUT("", func(c *gin.Context) {
-					role := c.GetHeader("X-Dev-Role")
-					if role == "" {
-						role = c.GetHeader("X-User-Role")
-					}
-					if strings.EqualFold(role, "SUPER_ADMIN") || strings.EqualFold(role, "SuperAdmin") {
-						huria.Update(c)
-						return
-					}
-					wilayah.UpdateHuria(c)
-				})
+				analyticsGroup.GET("/dw/ringkasan", analytics.DwRingkasan)
+				analyticsGroup.GET("/dw/cube", analytics.DwCube)
+				analyticsGroup.GET("/dw/aliran", analytics.DwAliran)
+				analyticsGroup.GET("/dw/sesi", analytics.DwSesi)
+				analyticsGroup.GET("/dw/kategori", analytics.DwKategori)
+				analyticsGroup.POST("/dw/refresh", superAdmin, analytics.DwRefresh)
 
-				huriaItem.DELETE("", middleware.RequireRole(cfg, "SUPER_ADMIN", "SuperAdmin"), huria.Delete)
+				analyticsGroup.GET("/ml/metrics", analytics.MlMetrics)
+				analyticsGroup.GET("/ml/opsi", analytics.MlOpsi)
+				analyticsGroup.POST("/ml/predict", analytics.MlPredict)
+			}
 
-				// Pemasukan Jemaat
-				huriaItem.POST("/pemasukan", wilayah.AddPemasukan)
-				huriaItem.PUT("/pemasukan/:idTransaksi", wilayah.UpdatePemasukan)
-				huriaItem.DELETE("/pemasukan/:idTransaksi", wilayah.DeletePemasukan)
+			// Distrik CRUD (tulis: SuperAdmin)
+			distrikGroup := secured.Group("/distrik")
+			{
+				distrikGroup.GET("", distrik.GetAll)
+				distrikGroup.GET("/:id", distrik.GetByID)
+				distrikGroup.POST("", superAdmin, distrik.Create)
+				distrikGroup.PUT("/:id", superAdmin, distrik.Update)
+				distrikGroup.DELETE("/:id", superAdmin, distrik.Delete)
+			}
 
-				// Sesi Ibadah & Pelean
-				huriaItem.POST("/sesi", wilayah.AddSesiIbadah)
-				huriaItem.PUT("/sesi/:idSesi", wilayah.UpdateSesiIbadah)
-				huriaItem.DELETE("/sesi/:idSesi", wilayah.DeleteSesiIbadah)
+			// Resort CRUD (tulis: SuperAdmin)
+			resortGroup := secured.Group("/resort")
+			{
+				resortGroup.GET("", resort.GetAll)
+				resortGroup.GET("/:id", resort.GetByID)
+				resortGroup.POST("", superAdmin, resort.Create)
+				resortGroup.PUT("/:id", superAdmin, resort.Update)
+				resortGroup.DELETE("/:id", superAdmin, resort.Delete)
+			}
 
-				// Alokasi Transaksi
-				huriaItem.POST("/alokasi", wilayah.AddAlokasi)
-				huriaItem.PUT("/alokasi/:idAlokasi", wilayah.UpdateAlokasi)
-				huriaItem.DELETE("/alokasi/:idAlokasi", wilayah.DeleteAlokasi)
+			// Wilayah & Seeder (operasi destruktif: SuperAdmin saja)
+			secured.GET("/wilayah", wilayah.GetAll)
+			secured.POST("/wilayah/sync", superAdmin, wilayah.SyncTree)
+			secured.POST("/seeder/reset", superAdmin, wilayah.ResetSeeder)
 
-				// Setoran Pusat
-				huriaItem.POST("/setoran", wilayah.AddSetoranPusat)
-				huriaItem.PUT("/setoran/:idSetoran", wilayah.UpdateSetoranPusat)
-				huriaItem.DELETE("/setoran/:idSetoran", wilayah.DeleteSetoranPusat)
+			// Huria CRUD & operasional keuangan
+			huriaGroup := secured.Group("/huria")
+			{
+				huriaGroup.GET("", huria.GetAll)
+				huriaGroup.POST("", superAdmin, huria.Create)
 
-				// Kategori Pemasukan
-				huriaItem.POST("/kategori", wilayah.AddKategori)
-				huriaItem.PUT("/kategori/:idKategori", wilayah.UpdateKategori)
-				huriaItem.DELETE("/kategori/:idKategori", wilayah.DeleteKategori)
+				huriaItem := huriaGroup.Group("/:id")
+				{
+					huriaItem.GET("", func(c *gin.Context) {
+						idHuria := c.Param("id")
+						if doc, err := huria.GetService().GetByID(c.Request.Context(), idHuria); err == nil && doc != nil {
+							c.JSON(http.StatusOK, gin.H{"data": doc})
+							return
+						}
+						wilayah.GetHuria(c)
+					})
 
-				// Lunggu
-				huriaItem.POST("/lunggu", wilayah.AddLunggu)
-				huriaItem.PUT("/lunggu/:idLunggu", wilayah.UpdateLunggu)
-				huriaItem.DELETE("/lunggu/:idLunggu", wilayah.DeleteLunggu)
+					huriaItem.PUT("", operator, func(c *gin.Context) {
+						if middleware.IsSuperAdmin(c) {
+							huria.Update(c)
+							return
+						}
+						wilayah.UpdateHuria(c)
+					})
 
-				// Warta Jemaat
-				huriaItem.PUT("/warta", wilayah.UpdateWarta)
+					huriaItem.DELETE("", superAdmin, huria.Delete)
+
+					// Operasional: Admin Huria (dibatasi ke Huria miliknya oleh service) atau SuperAdmin
+					huriaItem.POST("/pemasukan", operator, wilayah.AddPemasukan)
+					huriaItem.PUT("/pemasukan/:idTransaksi", operator, wilayah.UpdatePemasukan)
+					huriaItem.DELETE("/pemasukan/:idTransaksi", operator, wilayah.DeletePemasukan)
+
+					huriaItem.POST("/sesi", operator, wilayah.AddSesiIbadah)
+					huriaItem.PUT("/sesi/:idSesi", operator, wilayah.UpdateSesiIbadah)
+					huriaItem.DELETE("/sesi/:idSesi", operator, wilayah.DeleteSesiIbadah)
+
+					huriaItem.POST("/alokasi", operator, wilayah.AddAlokasi)
+					huriaItem.PUT("/alokasi/:idAlokasi", operator, wilayah.UpdateAlokasi)
+					huriaItem.DELETE("/alokasi/:idAlokasi", operator, wilayah.DeleteAlokasi)
+
+					huriaItem.POST("/setoran", operator, wilayah.AddSetoranPusat)
+					huriaItem.PUT("/setoran/:idSetoran", operator, wilayah.UpdateSetoranPusat)
+					huriaItem.DELETE("/setoran/:idSetoran", operator, wilayah.DeleteSetoranPusat)
+
+					huriaItem.POST("/kategori", operator, wilayah.AddKategori)
+					huriaItem.PUT("/kategori/:idKategori", operator, wilayah.UpdateKategori)
+					huriaItem.DELETE("/kategori/:idKategori", operator, wilayah.DeleteKategori)
+
+					huriaItem.POST("/lunggu", operator, wilayah.AddLunggu)
+					huriaItem.PUT("/lunggu/:idLunggu", operator, wilayah.UpdateLunggu)
+					huriaItem.DELETE("/lunggu/:idLunggu", operator, wilayah.DeleteLunggu)
+
+					huriaItem.PUT("/warta", operator, wilayah.UpdateWarta)
+				}
 			}
 		}
 	}

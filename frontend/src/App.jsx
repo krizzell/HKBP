@@ -11,10 +11,24 @@ import { StudioVisualisasiPage } from './pages/StudioVisualisasiPage'
 import { DataTabelPage } from './pages/DataTabelPage'
 import { ManajemenDataPage } from './pages/ManajemenDataPage'
 import { KelolaWilayahPage } from './pages/KelolaWilayahPage'
+import { StorytellingPage } from './pages/StorytellingPage'
+import { ModelPrediksiPage } from './pages/ModelPrediksiPage'
 import { WilayahLevelPage } from './pages/WilayahLevelPage'
 import { HuriaDetailPage } from './pages/HuriaDetailPage'
 import { setLiveWilayahTree } from './api/wilayahExplorerApi'
 import { Loader2, AlertCircle } from 'lucide-react'
+
+// Pemetaan path URL -> tab sidebar (satu sumber kebenaran)
+const tabFromPath = (p) => {
+  if (p.startsWith('/wilayah')) return 'perbandingan'
+  if (p.startsWith('/visualisasi') || p.startsWith('/studio')) return 'studio'
+  if (p.startsWith('/storytelling')) return 'storytelling'
+  if (p.startsWith('/model-prediksi')) return 'model'
+  if (p.startsWith('/tabel')) return 'tabel'
+  if (p.startsWith('/kelola')) return 'kelola-wilayah'
+  if (p.startsWith('/pengaturan') || p.startsWith('/manajemen')) return 'manajemen'
+  return 'dashboard'
+}
 
 function MainApp() {
   const { isAuthenticated, user, isSuperAdmin, isAdmin } = useAuth()
@@ -28,17 +42,9 @@ function MainApp() {
   })
 
   // Current Active Sidebar Tab
-  const [activeTab, setActiveTab] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const p = window.location.pathname
-      if (p.startsWith('/wilayah')) return 'perbandingan'
-      if (p.startsWith('/visualisasi') || p.startsWith('/studio')) return 'studio'
-      if (p.startsWith('/tabel')) return 'tabel'
-      if (p.startsWith('/kelola')) return 'kelola-wilayah'
-      if (p.startsWith('/pengaturan') || p.startsWith('/manajemen')) return 'manajemen'
-    }
-    return 'dashboard'
-  })
+  const [activeTab, setActiveTab] = useState(() =>
+    typeof window !== 'undefined' ? tabFromPath(window.location.pathname) : 'dashboard'
+  )
 
   // Sidebar collapse & mobile state
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
@@ -62,19 +68,7 @@ function MainApp() {
     const handlePopState = () => {
       const path = window.location.pathname
       setCurrentPath(path)
-      if (path.startsWith('/wilayah')) {
-        setActiveTab('perbandingan')
-      } else if (path.startsWith('/visualisasi') || path.startsWith('/studio')) {
-        setActiveTab('studio')
-      } else if (path.startsWith('/tabel')) {
-        setActiveTab('tabel')
-      } else if (path.startsWith('/kelola')) {
-        setActiveTab('kelola-wilayah')
-      } else if (path.startsWith('/pengaturan') || path.startsWith('/manajemen')) {
-        setActiveTab('manajemen')
-      } else if (path === '/') {
-        setActiveTab('dashboard')
-      }
+      setActiveTab(tabFromPath(path))
     }
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
@@ -85,19 +79,7 @@ function MainApp() {
     if (typeof window !== 'undefined') {
       window.history.pushState({}, '', path)
       setCurrentPath(path)
-      if (path.startsWith('/wilayah')) {
-        setActiveTab('perbandingan')
-      } else if (path.startsWith('/visualisasi') || path.startsWith('/studio')) {
-        setActiveTab('studio')
-      } else if (path.startsWith('/tabel')) {
-        setActiveTab('tabel')
-      } else if (path.startsWith('/kelola')) {
-        setActiveTab('kelola-wilayah')
-      } else if (path.startsWith('/pengaturan') || path.startsWith('/manajemen')) {
-        setActiveTab('manajemen')
-      } else if (path === '/') {
-        setActiveTab('dashboard')
-      }
+      setActiveTab(tabFromPath(path))
     }
   }, [])
 
@@ -113,6 +95,10 @@ function MainApp() {
         }
       } else if (tabId === 'studio') {
         handleNavigate('/studio-visualisasi')
+      } else if (tabId === 'storytelling') {
+        handleNavigate('/storytelling')
+      } else if (tabId === 'model') {
+        handleNavigate('/model-prediksi')
       } else if (tabId === 'tabel') {
         handleNavigate('/tabel')
       } else if (tabId === 'kelola-wilayah') {
@@ -226,6 +212,8 @@ function MainApp() {
     dashboard: 'Dashboard',
     tabel: 'Data tabel',
     studio: 'Visualisasi',
+    storytelling: 'Storytelling',
+    model: 'Prediksi Pelean (ML)',
     perbandingan: 'Wilayah & Huria',
     'kelola-wilayah': 'Kelola Wilayah',
     manajemen: 'Pengaturan',
@@ -339,6 +327,10 @@ function MainApp() {
                   onFilterChange={setFilters}
                 />
               )}
+
+              {activeTab === 'storytelling' && <StorytellingPage />}
+
+              {activeTab === 'model' && <ModelPrediksiPage />}
 
               {activeTab === 'tabel' && (
                 <DataTabelPage wilayahData={wilayahData} filters={filters} />

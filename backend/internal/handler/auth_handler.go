@@ -1,22 +1,34 @@
 package handler
 
 import (
+	"HKBP/internal/auth"
+	"HKBP/internal/config"
 	"HKBP/internal/domain"
+	"HKBP/internal/middleware"
 	"net/http"
-	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
 type AuthHandler struct {
-	svc  domain.WilayahService
-	repo domain.WilayahRepository
+	svc    domain.WilayahService
+	repo   domain.WilayahRepository
+	secret string
+	ttl    time.Duration
 }
 
-func NewAuthHandler(svc domain.WilayahService, repo domain.WilayahRepository) *AuthHandler {
-	return &AuthHandler{svc: svc, repo: repo}
+func NewAuthHandler(svc domain.WilayahService, repo domain.WilayahRepository, cfg config.Config) *AuthHandler {
+	return &AuthHandler{
+		svc:    svc,
+		repo:   repo,
+		secret: cfg.JWTSecret,
+		ttl:    time.Duration(cfg.JWTTTLHours) * time.Hour,
+	}
 }
 
+// Login memvalidasi kredensial lalu menerbitkan JWT HS256 bertanda tangan server.
+// Password tidak pernah dikembalikan ke klien.
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req domain.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -30,41 +42,37 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, res)
-}
-
-func (h *AuthHandler) Me(c *gin.Context) {
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token tidak ditemukan"})
+	now := time.Now()
+	token, err := auth.Sign(h.secret, auth.Claims{
+		Email:     res.User.Email,
+		Role:      res.User.Role,
+		IdHuria:   res.User.IdHuria,
+		NamaHuria: res.User.NamaHuria,
+		IssuedAt:  now.Unix(),
+		ExpiresAt: now.Add(h.ttl).Unix(),
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menerbitkan token"})
 		return
 	}
 
-	token := strings.TrimPrefix(authHeader, "Bearer ")
-	// Check user from token or header role
-	role := c.GetHeader("X-User-Role")
-	email := c.GetHeader("X-User-Email")
+	user := res.User
+	user.Password = ""
+	c.JSON(http.StatusOK, domain.LoginResponse{Token: token, User: user})
+}
 
-	if email == "" {
-		if strings.Contains(token, "superadmin") || strings.Contains(token, "pusat") {
-			email = "pusat@hkbp.or.id"
-		} else if strings.Contains(token, "pearaja") || strings.Contains(token, "2111") {
-			email = "admin.pearaja@hkbp.or.id"
-		} else if strings.Contains(token, "sudirman") || strings.Contains(token, "admin") || strings.Contains(token, "1111") {
-			email = "admin.sudirman@hkbp.or.id"
-		} else {
-			email = "pusat@hkbp.or.id"
-		}
+// Me mengembalikan profil pengguna dari identitas di dalam JWT (rute ini berada di balik Authenticate).
+func (h *AuthHandler) Me(c *gin.Context) {
+	claims, ok := middleware.ClaimsFrom(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token tidak valid"})
+		return
 	}
 
-	user, err := h.repo.FindUserByEmail(c.Request.Context(), email)
-	if err != nil {
-		// Fallback minimal user
-		user = &domain.User{
-			Email: email,
-			Role:  role,
-			Nama:  "Pengguna HKBP",
-		}
+	user, err := h.repo.FindUserByEmail(c.Request.Context(), claims.Email)
+	if err != nil || user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Pengguna tidak ditemukan"})
+		return
 	}
 
 	userCopy := *user

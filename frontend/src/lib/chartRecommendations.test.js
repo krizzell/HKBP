@@ -10,6 +10,7 @@ describe('getAvailableChartTypeIds', () => {
   it('recommends chart types supported by categorical time-series data', () => {
     const ids = getAvailableChartTypeIds({
       chartData: rows,
+      isTimeSeries: true,
       series: [
         { key: 'distrikA', label: 'Distrik A' },
         { key: 'distrikB', label: 'Distrik B' },

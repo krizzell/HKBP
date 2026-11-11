@@ -1,0 +1,5323 @@
+{
+  "meta": {
+    "dilatihPada": "2026-11-11T02:29:59+00:00",
+    "versiSklearn": "1.9.1",
+    "tugas": "Regresi: memprediksi total pelean (Rp) sebuah sesi ibadah",
+    "target": "total_pelean",
+    "fitur": [
+      {
+        "nama": "jumlah_jemaat",
+        "label": "Jumlah jemaat Huria"
+      },
+      {
+        "nama": "is_sesi_siang",
+        "label": "Sesi siang (1) / pagi (0)"
+      },
+      {
+        "nama": "bulan",
+        "label": "Bulan"
+      },
+      {
+        "nama": "minggu_ke",
+        "label": "Minggu ke- (ISO)"
+      },
+      {
+        "nama": "is_paskah",
+        "label": "Minggu Paskah"
+      },
+      {
+        "nama": "is_pentakosta",
+        "label": "Minggu Pentakosta"
+      },
+      {
+        "nama": "pelean_lag1",
+        "label": "Pelean 1 minggu lalu"
+      },
+      {
+        "nama": "pelean_lag2",
+        "label": "Pelean 2 minggu lalu"
+      },
+      {
+        "nama": "pelean_rata4",
+        "label": "Rata-rata pelean 4 minggu terakhir"
+      },
+      {
+        "nama": "hadir_lag1",
+        "label": "Kehadiran 1 minggu lalu"
+      },
+      {
+        "nama": "hadir_rata4",
+        "label": "Rata-rata kehadiran 4 minggu terakhir"
+      },
+      {
+        "nama": "pelean_per_hadir_lag1",
+        "label": "Pelean per jemaat hadir (minggu lalu)"
+      }
+    ],
+    "jumlahBaris": 2384,
+    "jumlahHuria": 56,
+    "rentangTanggal": {
+      "mulai": "2026-02-01",
+      "akhir": "2026-10-11"
+    },
+    "split": {
+      "metode": "Kronologis (60% awal latih, 20% validasi, 20% akhir uji) - tidak diacak",
+      "latih": {
+        "baris": 1364,
+        "sampai": "2026-06-28"
+      },
+      "validasi": {
+        "baris": 476,
+        "dari": "2026-07-05",
+        "sampai": "2026-08-16"
+      },
+      "uji": {
+        "baris": 544,
+        "dari": "2026-08-23",
+        "sampai": "2026-10-11"
+      }
+    },
+    "pencegahanKebocoran": [
+      "Semua fitur lag memakai shift(1) per deret (Huria x sesi): hanya data sebelum sesi.",
+      "Kehadiran & pelean sesi yang diprediksi TIDAK dipakai sebagai fitur.",
+      "Split kronologis; tuning memakai TimeSeriesSplit di data latih saja.",
+      "Data uji baru dievaluasi setelah model dipilih berdasarkan validasi."
+    ]
+  },
+  "modelTerbaik": "random_forest",
+  "namaModelTerbaik": "Random Forest",
+  "alasanPemilihan": "Random Forest dipilih: RMSE validasi 436,828 (terendah atau dalam 2% dari terendah; bila seri dipilih model paling sederhana).",
+  "pembandingNaif": {
+    "deskripsi": "Prediksi = pelean sesi yang sama minggu lalu",
+    "validasi": {
+      "mae": 328573.55,
+      "rmse": 459334.48,
+      "mape": 4.61,
+      "r2": 0.981676
+    },
+    "uji": {
+      "mae": 348297.81,
+      "rmse": 477430.13,
+      "mape": 4.7055,
+      "r2": 0.981471
+    }
+  },
+  "model": {
+    "linear_regression": {
+      "nama": "Linear Regression (baseline)",
+      "tuning": {
+        "metode": "Tanpa tuning (model dasar)",
+        "parameterTerbaik": {}
+      },
+      "latih": {
+        "mae": 495377.78,
+        "rmse": 886742.08,
+        "mape": 6.6131,
+        "r2": 0.943356
+      },
+      "validasi": {
+        "mae": 608558.01,
+        "rmse": 745912.29,
+        "mape": 9.2043,
+        "r2": 0.951678
+      },
+      "uji": {
+        "mae": 607972.27,
+        "rmse": 723240.06,
+        "mape": 9.3929,
+        "r2": 0.95748
+      },
+      "cvWaktu": {
+        "mae": {
+          "rata": 1114029.378,
+          "simpangan": 1246043.3075
+        },
+        "rmse": {
+          "rata": 1376966.402,
+          "simpangan": 1442834.6179
+        },
+        "mape": {
+          "rata": 14.4707,
+          "simpangan": 15.1937
+        },
+        "r2": {
+          "rata": 0.7115,
+          "simpangan": 0.4907
+        },
+        "fold": 5
+      }
+    },
+    "random_forest": {
+      "nama": "Random Forest",
+      "tuning": {
+        "metode": "RandomizedSearchCV (n_iter=12) + TimeSeriesSplit(4)",
+        "skorCvRmse": 994581.13,
+        "parameterTerbaik": {
+          "n_estimators": 100,
+          "min_samples_leaf": 1,
+          "max_features": 1.0,
+          "max_depth": 6
+        }
+      },
+      "latih": {
+        "mae": 282919.51,
+        "rmse": 384931.87,
+        "mape": 3.8431,
+        "r2": 0.989326
+      },
+      "validasi": {
+        "mae": 325641.71,
+        "rmse": 436827.61,
+        "mape": 4.5661,
+        "r2": 0.983427
+      },
+      "uji": {
+        "mae": 286127.66,
+        "rmse": 383595.23,
+        "mape": 3.8909,
+        "r2": 0.988039
+      },
+      "cvWaktu": {
+        "mae": {
+          "rata": 742713.514,
+          "simpangan": 454876.5317
+        },
+        "rmse": {
+          "rata": 1039851.098,
+          "simpangan": 667796.7513
+        },
+        "mape": {
+          "rata": 10.129,
+          "simpangan": 4.9496
+        },
+        "r2": {
+          "rata": 0.8919,
+          "simpangan": 0.1049
+        },
+        "fold": 5
+      }
+    },
+    "gradient_boosting": {
+      "nama": "Gradient Boosting",
+      "tuning": {
+        "metode": "RandomizedSearchCV (n_iter=12) + TimeSeriesSplit(4)",
+        "skorCvRmse": 1024378.2,
+        "parameterTerbaik": {
+          "subsample": 0.85,
+          "n_estimators": 200,
+          "max_depth": 4,
+          "learning_rate": 0.03
+        }
+      },
+      "latih": {
+        "mae": 252137.42,
+        "rmse": 329468.32,
+        "mape": 3.6055,
+        "r2": 0.99218
+      },
+      "validasi": {
+        "mae": 347014.23,
+        "rmse": 476686.11,
+        "mape": 4.7484,
+        "r2": 0.980265
+      },
+      "uji": {
+        "mae": 305963.83,
+        "rmse": 419843.13,
+        "mape": 4.1344,
+        "r2": 0.985671
+      },
+      "cvWaktu": {
+        "mae": {
+          "rata": 772102.744,
+          "simpangan": 518839.8064
+        },
+        "rmse": {
+          "rata": 1079192.418,
+          "simpangan": 764494.2171
+        },
+        "mape": {
+          "rata": 10.3865,
+          "simpangan": 5.5974
+        },
+        "r2": {
+          "rata": 0.875,
+          "simpangan": 0.139
+        },
+        "fold": 5
+      }
+    }
+  },
+  "kepentingan": [
+    {
+      "fitur": "pelean_rata4",
+      "label": "Rata-rata pelean 4 minggu terakhir",
+      "kepentingan": 0.689922
+    },
+    {
+      "fitur": "is_paskah",
+      "label": "Minggu Paskah",
+      "kepentingan": 0.122354
+    },
+    {
+      "fitur": "pelean_lag1",
+      "label": "Pelean 1 minggu lalu",
+      "kepentingan": 0.088624
+    },
+    {
+      "fitur": "pelean_lag2",
+      "label": "Pelean 2 minggu lalu",
+      "kepentingan": 0.072749
+    },
+    {
+      "fitur": "hadir_rata4",
+      "label": "Rata-rata kehadiran 4 minggu terakhir",
+      "kepentingan": 0.018766
+    },
+    {
+      "fitur": "hadir_lag1",
+      "label": "Kehadiran 1 minggu lalu",
+      "kepentingan": 0.005277
+    },
+    {
+      "fitur": "pelean_per_hadir_lag1",
+      "label": "Pelean per jemaat hadir (minggu lalu)",
+      "kepentingan": 0.001176
+    },
+    {
+      "fitur": "jumlah_jemaat",
+      "label": "Jumlah jemaat Huria",
+      "kepentingan": 0.000905
+    },
+    {
+      "fitur": "is_sesi_siang",
+      "label": "Sesi siang (1) / pagi (0)",
+      "kepentingan": 0.000183
+    },
+    {
+      "fitur": "minggu_ke",
+      "label": "Minggu ke- (ISO)",
+      "kepentingan": 2.4e-05
+    },
+    {
+      "fitur": "bulan",
+      "label": "Bulan",
+      "kepentingan": 2e-05
+    },
+    {
+      "fitur": "is_pentakosta",
+      "label": "Minggu Pentakosta",
+      "kepentingan": 0.0
+    }
+  ],
+  "titikUji": [
+    {
+      "idHuria": "H-1.1.1.1",
+      "huria": "HKBP Sudirman Jakarta",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 8343000,
+      "prediksi": 7891545,
+      "galat": -451455
+    },
+    {
+      "idHuria": "H-1.1.1.1",
+      "huria": "HKBP Sudirman Jakarta",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 8019000,
+      "prediksi": 8056307,
+      "galat": 37307
+    },
+    {
+      "idHuria": "H-1.1.1.1",
+      "huria": "HKBP Sudirman Jakarta",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 8424000,
+      "prediksi": 8038638,
+      "galat": -385362
+    },
+    {
+      "idHuria": "H-1.1.1.1",
+      "huria": "HKBP Sudirman Jakarta",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 8424000,
+      "prediksi": 8096138,
+      "galat": -327862
+    },
+    {
+      "idHuria": "H-1.1.1.1",
+      "huria": "HKBP Sudirman Jakarta",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 7857000,
+      "prediksi": 8297704,
+      "galat": 440704
+    },
+    {
+      "idHuria": "H-1.1.1.1",
+      "huria": "HKBP Sudirman Jakarta",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 7938000,
+      "prediksi": 8053106,
+      "galat": 115106
+    },
+    {
+      "idHuria": "H-1.1.1.1",
+      "huria": "HKBP Sudirman Jakarta",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 7857000,
+      "prediksi": 7964324,
+      "galat": 107324
+    },
+    {
+      "idHuria": "H-1.1.1.1",
+      "huria": "HKBP Sudirman Jakarta",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 8586000,
+      "prediksi": 7905750,
+      "galat": -680250
+    },
+    {
+      "idHuria": "H-1.1.1.1",
+      "huria": "HKBP Sudirman Jakarta",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 10197000,
+      "prediksi": 9464951,
+      "galat": -732049
+    },
+    {
+      "idHuria": "H-1.1.1.1",
+      "huria": "HKBP Sudirman Jakarta",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 9801000,
+      "prediksi": 9520143,
+      "galat": -280857
+    },
+    {
+      "idHuria": "H-1.1.1.1",
+      "huria": "HKBP Sudirman Jakarta",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 10296000,
+      "prediksi": 9597091,
+      "galat": -698909
+    },
+    {
+      "idHuria": "H-1.1.1.1",
+      "huria": "HKBP Sudirman Jakarta",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 10296000,
+      "prediksi": 9627134,
+      "galat": -668866
+    },
+    {
+      "idHuria": "H-1.1.1.1",
+      "huria": "HKBP Sudirman Jakarta",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 9603000,
+      "prediksi": 9862394,
+      "galat": 259394
+    },
+    {
+      "idHuria": "H-1.1.1.1",
+      "huria": "HKBP Sudirman Jakarta",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 9702000,
+      "prediksi": 9641820,
+      "galat": -60180
+    },
+    {
+      "idHuria": "H-1.1.1.1",
+      "huria": "HKBP Sudirman Jakarta",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 9603000,
+      "prediksi": 9530906,
+      "galat": -72094
+    },
+    {
+      "idHuria": "H-1.1.1.1",
+      "huria": "HKBP Sudirman Jakarta",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 10494000,
+      "prediksi": 9515374,
+      "galat": -978626
+    },
+    {
+      "idHuria": "H-1.1.1.2",
+      "huria": "HKBP Menteng Lama",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 5076000,
+      "prediksi": 5107155,
+      "galat": 31155
+    },
+    {
+      "idHuria": "H-1.1.1.2",
+      "huria": "HKBP Menteng Lama",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 5508000,
+      "prediksi": 5124726,
+      "galat": -383274
+    },
+    {
+      "idHuria": "H-1.1.1.2",
+      "huria": "HKBP Menteng Lama",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 5562000,
+      "prediksi": 5168836,
+      "galat": -393164
+    },
+    {
+      "idHuria": "H-1.1.1.2",
+      "huria": "HKBP Menteng Lama",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 5400000,
+      "prediksi": 5324164,
+      "galat": -75836
+    },
+    {
+      "idHuria": "H-1.1.1.2",
+      "huria": "HKBP Menteng Lama",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 5400000,
+      "prediksi": 5390556,
+      "galat": -9444
+    },
+    {
+      "idHuria": "H-1.1.1.2",
+      "huria": "HKBP Menteng Lama",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 5400000,
+      "prediksi": 5426593,
+      "galat": 26593
+    },
+    {
+      "idHuria": "H-1.1.1.2",
+      "huria": "HKBP Menteng Lama",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 5778000,
+      "prediksi": 5426593,
+      "galat": -351407
+    },
+    {
+      "idHuria": "H-1.1.1.2",
+      "huria": "HKBP Menteng Lama",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 5400000,
+      "prediksi": 5461283,
+      "galat": 61283
+    },
+    {
+      "idHuria": "H-1.1.1.2",
+      "huria": "HKBP Menteng Lama",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 6204000,
+      "prediksi": 6461234,
+      "galat": 257234
+    },
+    {
+      "idHuria": "H-1.1.1.2",
+      "huria": "HKBP Menteng Lama",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 6732000,
+      "prediksi": 6461234,
+      "galat": -270766
+    },
+    {
+      "idHuria": "H-1.1.1.2",
+      "huria": "HKBP Menteng Lama",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 6798000,
+      "prediksi": 6477181,
+      "galat": -320819
+    },
+    {
+      "idHuria": "H-1.1.1.2",
+      "huria": "HKBP Menteng Lama",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 6600000,
+      "prediksi": 6526111,
+      "galat": -73889
+    },
+    {
+      "idHuria": "H-1.1.1.2",
+      "huria": "HKBP Menteng Lama",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 6600000,
+      "prediksi": 6561685,
+      "galat": -38315
+    },
+    {
+      "idHuria": "H-1.1.1.2",
+      "huria": "HKBP Menteng Lama",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 6600000,
+      "prediksi": 6723720,
+      "galat": 123720
+    },
+    {
+      "idHuria": "H-1.1.1.2",
+      "huria": "HKBP Menteng Lama",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 7062000,
+      "prediksi": 6707577,
+      "galat": -354423
+    },
+    {
+      "idHuria": "H-1.1.1.2",
+      "huria": "HKBP Menteng Lama",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 6600000,
+      "prediksi": 6791910,
+      "galat": 191910
+    },
+    {
+      "idHuria": "H-1.1.2.1",
+      "huria": "HKBP Tebet Barat",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 7155000,
+      "prediksi": 6550435,
+      "galat": -604565
+    },
+    {
+      "idHuria": "H-1.1.2.1",
+      "huria": "HKBP Tebet Barat",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 7155000,
+      "prediksi": 6817199,
+      "galat": -337801
+    },
+    {
+      "idHuria": "H-1.1.2.1",
+      "huria": "HKBP Tebet Barat",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 6817500,
+      "prediksi": 6817199,
+      "galat": -301
+    },
+    {
+      "idHuria": "H-1.1.2.1",
+      "huria": "HKBP Tebet Barat",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 7155000,
+      "prediksi": 6892630,
+      "galat": -262370
+    },
+    {
+      "idHuria": "H-1.1.2.1",
+      "huria": "HKBP Tebet Barat",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 6277499,
+      "prediksi": 6951015,
+      "galat": 673516
+    },
+    {
+      "idHuria": "H-1.1.2.1",
+      "huria": "HKBP Tebet Barat",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 6277499,
+      "prediksi": 6705922,
+      "galat": 428423
+    },
+    {
+      "idHuria": "H-1.1.2.1",
+      "huria": "HKBP Tebet Barat",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 6412500,
+      "prediksi": 6680494,
+      "galat": 267994
+    },
+    {
+      "idHuria": "H-1.1.2.1",
+      "huria": "HKBP Tebet Barat",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 6345000,
+      "prediksi": 6506982,
+      "galat": 161982
+    },
+    {
+      "idHuria": "H-1.1.2.1",
+      "huria": "HKBP Tebet Barat",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 8745000,
+      "prediksi": 8056206,
+      "galat": -688794
+    },
+    {
+      "idHuria": "H-1.1.2.1",
+      "huria": "HKBP Tebet Barat",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 8745000,
+      "prediksi": 8329849,
+      "galat": -415151
+    },
+    {
+      "idHuria": "H-1.1.2.1",
+      "huria": "HKBP Tebet Barat",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 8332500,
+      "prediksi": 8567533,
+      "galat": 235033
+    },
+    {
+      "idHuria": "H-1.1.2.1",
+      "huria": "HKBP Tebet Barat",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 8745000,
+      "prediksi": 8532189,
+      "galat": -212811
+    },
+    {
+      "idHuria": "H-1.1.2.1",
+      "huria": "HKBP Tebet Barat",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 7672500,
+      "prediksi": 8475272,
+      "galat": 802772
+    },
+    {
+      "idHuria": "H-1.1.2.1",
+      "huria": "HKBP Tebet Barat",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 7672500,
+      "prediksi": 8215596,
+      "galat": 543096
+    },
+    {
+      "idHuria": "H-1.1.2.1",
+      "huria": "HKBP Tebet Barat",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 7837500,
+      "prediksi": 7975258,
+      "galat": 137758
+    },
+    {
+      "idHuria": "H-1.1.2.1",
+      "huria": "HKBP Tebet Barat",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 7755000,
+      "prediksi": 7967200,
+      "galat": 212200
+    },
+    {
+      "idHuria": "H-1.1.2.2",
+      "huria": "HKBP Pancoran",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 3888000,
+      "prediksi": 3999475,
+      "galat": 111475
+    },
+    {
+      "idHuria": "H-1.1.2.2",
+      "huria": "HKBP Pancoran",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 4090500,
+      "prediksi": 3899934,
+      "galat": -190566
+    },
+    {
+      "idHuria": "H-1.1.2.2",
+      "huria": "HKBP Pancoran",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 3766499,
+      "prediksi": 3929360,
+      "galat": 162861
+    },
+    {
+      "idHuria": "H-1.1.2.2",
+      "huria": "HKBP Pancoran",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 3969000,
+      "prediksi": 3958696,
+      "galat": -10304
+    },
+    {
+      "idHuria": "H-1.1.2.2",
+      "huria": "HKBP Pancoran",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 3766499,
+      "prediksi": 3852360,
+      "galat": 85861
+    },
+    {
+      "idHuria": "H-1.1.2.2",
+      "huria": "HKBP Pancoran",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 3766499,
+      "prediksi": 3874847,
+      "galat": 108348
+    },
+    {
+      "idHuria": "H-1.1.2.2",
+      "huria": "HKBP Pancoran",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 4171500,
+      "prediksi": 3826658,
+      "galat": -344842
+    },
+    {
+      "idHuria": "H-1.1.2.2",
+      "huria": "HKBP Pancoran",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 4252500,
+      "prediksi": 3892948,
+      "galat": -359552
+    },
+    {
+      "idHuria": "H-1.1.2.2",
+      "huria": "HKBP Pancoran",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 4752000,
+      "prediksi": 4876928,
+      "galat": 124928
+    },
+    {
+      "idHuria": "H-1.1.2.2",
+      "huria": "HKBP Pancoran",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 4999500,
+      "prediksi": 4796574,
+      "galat": -202926
+    },
+    {
+      "idHuria": "H-1.1.2.2",
+      "huria": "HKBP Pancoran",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 4603500,
+      "prediksi": 4839822,
+      "galat": 236322
+    },
+    {
+      "idHuria": "H-1.1.2.2",
+      "huria": "HKBP Pancoran",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 4851000,
+      "prediksi": 4785957,
+      "galat": -65043
+    },
+    {
+      "idHuria": "H-1.1.2.2",
+      "huria": "HKBP Pancoran",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 4603500,
+      "prediksi": 4751184,
+      "galat": 147684
+    },
+    {
+      "idHuria": "H-1.1.2.2",
+      "huria": "HKBP Pancoran",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 4603500,
+      "prediksi": 4777404,
+      "galat": 173904
+    },
+    {
+      "idHuria": "H-1.1.2.2",
+      "huria": "HKBP Pancoran",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 5098500,
+      "prediksi": 4661338,
+      "galat": -437162
+    },
+    {
+      "idHuria": "H-1.1.2.2",
+      "huria": "HKBP Pancoran",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 5197500,
+      "prediksi": 4807521,
+      "galat": -389979
+    },
+    {
+      "idHuria": "H-1.2.1.1",
+      "huria": "HKBP Rawamangun Jati",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 7350750,
+      "prediksi": 6957417,
+      "galat": -393333
+    },
+    {
+      "idHuria": "H-1.2.1.1",
+      "huria": "HKBP Rawamangun Jati",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 7573500,
+      "prediksi": 6972377,
+      "galat": -601123
+    },
+    {
+      "idHuria": "H-1.2.1.1",
+      "huria": "HKBP Rawamangun Jati",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 7870500,
+      "prediksi": 7131781,
+      "galat": -738719
+    },
+    {
+      "idHuria": "H-1.2.1.1",
+      "huria": "HKBP Rawamangun Jati",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 7499250,
+      "prediksi": 7561209,
+      "galat": 61959
+    },
+    {
+      "idHuria": "H-1.2.1.1",
+      "huria": "HKBP Rawamangun Jati",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 7722000,
+      "prediksi": 7594784,
+      "galat": -127216
+    },
+    {
+      "idHuria": "H-1.2.1.1",
+      "huria": "HKBP Rawamangun Jati",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 7870500,
+      "prediksi": 7854412,
+      "galat": -16088
+    },
+    {
+      "idHuria": "H-1.2.1.1",
+      "huria": "HKBP Rawamangun Jati",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 7053750,
+      "prediksi": 7905750,
+      "galat": 852000
+    },
+    {
+      "idHuria": "H-1.2.1.1",
+      "huria": "HKBP Rawamangun Jati",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 7573500,
+      "prediksi": 7477595,
+      "galat": -95905
+    },
+    {
+      "idHuria": "H-1.2.1.1",
+      "huria": "HKBP Rawamangun Jati",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 8984250,
+      "prediksi": 8540037,
+      "galat": -444213
+    },
+    {
+      "idHuria": "H-1.2.1.1",
+      "huria": "HKBP Rawamangun Jati",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 9256500,
+      "prediksi": 8755718,
+      "galat": -500782
+    },
+    {
+      "idHuria": "H-1.2.1.1",
+      "huria": "HKBP Rawamangun Jati",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 9619500,
+      "prediksi": 9152963,
+      "galat": -466537
+    },
+    {
+      "idHuria": "H-1.2.1.1",
+      "huria": "HKBP Rawamangun Jati",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 9165750,
+      "prediksi": 9346162,
+      "galat": 180412
+    },
+    {
+      "idHuria": "H-1.2.1.1",
+      "huria": "HKBP Rawamangun Jati",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 9438000,
+      "prediksi": 9375450,
+      "galat": -62550
+    },
+    {
+      "idHuria": "H-1.2.1.1",
+      "huria": "HKBP Rawamangun Jati",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 9619500,
+      "prediksi": 9443538,
+      "galat": -175962
+    },
+    {
+      "idHuria": "H-1.2.1.1",
+      "huria": "HKBP Rawamangun Jati",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 8621250,
+      "prediksi": 9469649,
+      "galat": 848399
+    },
+    {
+      "idHuria": "H-1.2.1.1",
+      "huria": "HKBP Rawamangun Jati",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 9256500,
+      "prediksi": 8858107,
+      "galat": -398393
+    },
+    {
+      "idHuria": "H-1.2.1.2",
+      "huria": "HKBP Cipinang Cempedak",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 3557249,
+      "prediksi": 3870931,
+      "galat": 313682
+    },
+    {
+      "idHuria": "H-1.2.1.2",
+      "huria": "HKBP Cipinang Cempedak",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 3786750,
+      "prediksi": 3695074,
+      "galat": -91676
+    },
+    {
+      "idHuria": "H-1.2.1.2",
+      "huria": "HKBP Cipinang Cempedak",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 3901500,
+      "prediksi": 3681413,
+      "galat": -220087
+    },
+    {
+      "idHuria": "H-1.2.1.2",
+      "huria": "HKBP Cipinang Cempedak",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 3633750,
+      "prediksi": 3870931,
+      "galat": 237181
+    },
+    {
+      "idHuria": "H-1.2.1.2",
+      "huria": "HKBP Cipinang Cempedak",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 4016250,
+      "prediksi": 3705014,
+      "galat": -311236
+    },
+    {
+      "idHuria": "H-1.2.1.2",
+      "huria": "HKBP Cipinang Cempedak",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 3939750,
+      "prediksi": 3783416,
+      "galat": -156334
+    },
+    {
+      "idHuria": "H-1.2.1.2",
+      "huria": "HKBP Cipinang Cempedak",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 3863250,
+      "prediksi": 3889267,
+      "galat": 26017
+    },
+    {
+      "idHuria": "H-1.2.1.2",
+      "huria": "HKBP Cipinang Cempedak",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 4092750,
+      "prediksi": 3879926,
+      "galat": -212824
+    },
+    {
+      "idHuria": "H-1.2.1.2",
+      "huria": "HKBP Cipinang Cempedak",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 4347750,
+      "prediksi": 4736933,
+      "galat": 389183
+    },
+    {
+      "idHuria": "H-1.2.1.2",
+      "huria": "HKBP Cipinang Cempedak",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 4628250,
+      "prediksi": 4517261,
+      "galat": -110989
+    },
+    {
+      "idHuria": "H-1.2.1.2",
+      "huria": "HKBP Cipinang Cempedak",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 4768500,
+      "prediksi": 4403785,
+      "galat": -364715
+    },
+    {
+      "idHuria": "H-1.2.1.2",
+      "huria": "HKBP Cipinang Cempedak",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 4441250,
+      "prediksi": 4732109,
+      "galat": 290859
+    },
+    {
+      "idHuria": "H-1.2.1.2",
+      "huria": "HKBP Cipinang Cempedak",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 4908750,
+      "prediksi": 4597504,
+      "galat": -311246
+    },
+    {
+      "idHuria": "H-1.2.1.2",
+      "huria": "HKBP Cipinang Cempedak",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 4815250,
+      "prediksi": 4454348,
+      "galat": -360902
+    },
+    {
+      "idHuria": "H-1.2.1.2",
+      "huria": "HKBP Cipinang Cempedak",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 4721750,
+      "prediksi": 4802980,
+      "galat": 81230
+    },
+    {
+      "idHuria": "H-1.2.1.2",
+      "huria": "HKBP Cipinang Cempedak",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 5002250,
+      "prediksi": 4773898,
+      "galat": -228352
+    },
+    {
+      "idHuria": "H-1.2.2.1",
+      "huria": "HKBP Kebayoran Baru",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 9306000,
+      "prediksi": 9662782,
+      "galat": 356782
+    },
+    {
+      "idHuria": "H-1.2.2.1",
+      "huria": "HKBP Kebayoran Baru",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 10296000,
+      "prediksi": 9607063,
+      "galat": -688937
+    },
+    {
+      "idHuria": "H-1.2.2.1",
+      "huria": "HKBP Kebayoran Baru",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 9999000,
+      "prediksi": 9560182,
+      "galat": -438818
+    },
+    {
+      "idHuria": "H-1.2.2.1",
+      "huria": "HKBP Kebayoran Baru",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 9900000,
+      "prediksi": 9670538,
+      "galat": -229462
+    },
+    {
+      "idHuria": "H-1.2.2.1",
+      "huria": "HKBP Kebayoran Baru",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 10593000,
+      "prediksi": 9617467,
+      "galat": -975533
+    },
+    {
+      "idHuria": "H-1.2.2.1",
+      "huria": "HKBP Kebayoran Baru",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 10494000,
+      "prediksi": 9916070,
+      "galat": -577930
+    },
+    {
+      "idHuria": "H-1.2.2.1",
+      "huria": "HKBP Kebayoran Baru",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 10593000,
+      "prediksi": 10013435,
+      "galat": -579565
+    },
+    {
+      "idHuria": "H-1.2.2.1",
+      "huria": "HKBP Kebayoran Baru",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 9999000,
+      "prediksi": 10013435,
+      "galat": 14435
+    },
+    {
+      "idHuria": "H-1.2.2.1",
+      "huria": "HKBP Kebayoran Baru",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 11374000,
+      "prediksi": 12045420,
+      "galat": 671420
+    },
+    {
+      "idHuria": "H-1.2.2.1",
+      "huria": "HKBP Kebayoran Baru",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 12584000,
+      "prediksi": 11748104,
+      "galat": -835896
+    },
+    {
+      "idHuria": "H-1.2.2.1",
+      "huria": "HKBP Kebayoran Baru",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 12221000,
+      "prediksi": 11958571,
+      "galat": -262429
+    },
+    {
+      "idHuria": "H-1.2.2.1",
+      "huria": "HKBP Kebayoran Baru",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 12100000,
+      "prediksi": 12039224,
+      "galat": -60776
+    },
+    {
+      "idHuria": "H-1.2.2.1",
+      "huria": "HKBP Kebayoran Baru",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 12947000,
+      "prediksi": 11941113,
+      "galat": -1005887
+    },
+    {
+      "idHuria": "H-1.2.2.1",
+      "huria": "HKBP Kebayoran Baru",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 12826000,
+      "prediksi": 12147286,
+      "galat": -678714
+    },
+    {
+      "idHuria": "H-1.2.2.1",
+      "huria": "HKBP Kebayoran Baru",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 12947000,
+      "prediksi": 12275087,
+      "galat": -671913
+    },
+    {
+      "idHuria": "H-1.2.2.1",
+      "huria": "HKBP Kebayoran Baru",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 12221000,
+      "prediksi": 12637497,
+      "galat": 416497
+    },
+    {
+      "idHuria": "H-1.2.2.2",
+      "huria": "HKBP Gandaria",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 3744000,
+      "prediksi": 3504512,
+      "galat": -239488
+    },
+    {
+      "idHuria": "H-1.2.2.2",
+      "huria": "HKBP Gandaria",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 3384000,
+      "prediksi": 3538776,
+      "galat": 154776
+    },
+    {
+      "idHuria": "H-1.2.2.2",
+      "huria": "HKBP Gandaria",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 3456000,
+      "prediksi": 3538563,
+      "galat": 82563
+    },
+    {
+      "idHuria": "H-1.2.2.2",
+      "huria": "HKBP Gandaria",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 3744000,
+      "prediksi": 3471705,
+      "galat": -272295
+    },
+    {
+      "idHuria": "H-1.2.2.2",
+      "huria": "HKBP Gandaria",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 3384000,
+      "prediksi": 3538776,
+      "galat": 154776
+    },
+    {
+      "idHuria": "H-1.2.2.2",
+      "huria": "HKBP Gandaria",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 3347999,
+      "prediksi": 3512350,
+      "galat": 164351
+    },
+    {
+      "idHuria": "H-1.2.2.2",
+      "huria": "HKBP Gandaria",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 3528000,
+      "prediksi": 3445493,
+      "galat": -82507
+    },
+    {
+      "idHuria": "H-1.2.2.2",
+      "huria": "HKBP Gandaria",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 3528000,
+      "prediksi": 3462742,
+      "galat": -65258
+    },
+    {
+      "idHuria": "H-1.2.2.2",
+      "huria": "HKBP Gandaria",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 4576000,
+      "prediksi": 4278033,
+      "galat": -297967
+    },
+    {
+      "idHuria": "H-1.2.2.2",
+      "huria": "HKBP Gandaria",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 4136000,
+      "prediksi": 4286283,
+      "galat": 150283
+    },
+    {
+      "idHuria": "H-1.2.2.2",
+      "huria": "HKBP Gandaria",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 4224000,
+      "prediksi": 4321737,
+      "galat": 97737
+    },
+    {
+      "idHuria": "H-1.2.2.2",
+      "huria": "HKBP Gandaria",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 4576000,
+      "prediksi": 4211467,
+      "galat": -364533
+    },
+    {
+      "idHuria": "H-1.2.2.2",
+      "huria": "HKBP Gandaria",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 4136000,
+      "prediksi": 4279144,
+      "galat": 143144
+    },
+    {
+      "idHuria": "H-1.2.2.2",
+      "huria": "HKBP Gandaria",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 4092000,
+      "prediksi": 4321737,
+      "galat": 229737
+    },
+    {
+      "idHuria": "H-1.2.2.2",
+      "huria": "HKBP Gandaria",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 4312000,
+      "prediksi": 4211467,
+      "galat": -100533
+    },
+    {
+      "idHuria": "H-1.2.2.2",
+      "huria": "HKBP Gandaria",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 4312000,
+      "prediksi": 4153124,
+      "galat": -158876
+    },
+    {
+      "idHuria": "H-10.1.1.1",
+      "huria": "HKBP Medan Kota",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 10692000,
+      "prediksi": 10818555,
+      "galat": 126555
+    },
+    {
+      "idHuria": "H-10.1.1.1",
+      "huria": "HKBP Medan Kota",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 10152000,
+      "prediksi": 10796042,
+      "galat": 644042
+    },
+    {
+      "idHuria": "H-10.1.1.1",
+      "huria": "HKBP Medan Kota",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 11448000,
+      "prediksi": 10607277,
+      "galat": -840723
+    },
+    {
+      "idHuria": "H-10.1.1.1",
+      "huria": "HKBP Medan Kota",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 10584000,
+      "prediksi": 10712049,
+      "galat": 128049
+    },
+    {
+      "idHuria": "H-10.1.1.1",
+      "huria": "HKBP Medan Kota",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 11124000,
+      "prediksi": 10621456,
+      "galat": -502544
+    },
+    {
+      "idHuria": "H-10.1.1.1",
+      "huria": "HKBP Medan Kota",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 10368000,
+      "prediksi": 10635686,
+      "galat": 267686
+    },
+    {
+      "idHuria": "H-10.1.1.1",
+      "huria": "HKBP Medan Kota",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 11556000,
+      "prediksi": 10629920,
+      "galat": -926080
+    },
+    {
+      "idHuria": "H-10.1.1.1",
+      "huria": "HKBP Medan Kota",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 10260000,
+      "prediksi": 10725745,
+      "galat": 465745
+    },
+    {
+      "idHuria": "H-10.1.1.1",
+      "huria": "HKBP Medan Kota",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 13068000,
+      "prediksi": 13226993,
+      "galat": 158993
+    },
+    {
+      "idHuria": "H-10.1.1.1",
+      "huria": "HKBP Medan Kota",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 12408000,
+      "prediksi": 13122970,
+      "galat": 714970
+    },
+    {
+      "idHuria": "H-10.1.1.1",
+      "huria": "HKBP Medan Kota",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 13992000,
+      "prediksi": 13007162,
+      "galat": -984838
+    },
+    {
+      "idHuria": "H-10.1.1.1",
+      "huria": "HKBP Medan Kota",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 12936000,
+      "prediksi": 13108528,
+      "galat": 172528
+    },
+    {
+      "idHuria": "H-10.1.1.1",
+      "huria": "HKBP Medan Kota",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 13596000,
+      "prediksi": 13006196,
+      "galat": -589804
+    },
+    {
+      "idHuria": "H-10.1.1.1",
+      "huria": "HKBP Medan Kota",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 12672000,
+      "prediksi": 13098216,
+      "galat": 426216
+    },
+    {
+      "idHuria": "H-10.1.1.1",
+      "huria": "HKBP Medan Kota",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 14124000,
+      "prediksi": 13085246,
+      "galat": -1038754
+    },
+    {
+      "idHuria": "H-10.1.1.1",
+      "huria": "HKBP Medan Kota",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 12540000,
+      "prediksi": 13152931,
+      "galat": 612931
+    },
+    {
+      "idHuria": "H-10.1.1.2",
+      "huria": "HKBP Teladan Medan",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 6300000,
+      "prediksi": 6443211,
+      "galat": 143211
+    },
+    {
+      "idHuria": "H-10.1.1.2",
+      "huria": "HKBP Teladan Medan",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 6678000,
+      "prediksi": 6425982,
+      "galat": -252018
+    },
+    {
+      "idHuria": "H-10.1.1.2",
+      "huria": "HKBP Teladan Medan",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 5922000,
+      "prediksi": 6460753,
+      "galat": 538753
+    },
+    {
+      "idHuria": "H-10.1.1.2",
+      "huria": "HKBP Teladan Medan",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 6300000,
+      "prediksi": 6298188,
+      "galat": -1812
+    },
+    {
+      "idHuria": "H-10.1.1.2",
+      "huria": "HKBP Teladan Medan",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 6111000,
+      "prediksi": 6226371,
+      "galat": 115371
+    },
+    {
+      "idHuria": "H-10.1.1.2",
+      "huria": "HKBP Teladan Medan",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 6237000,
+      "prediksi": 6416944,
+      "galat": 179944
+    },
+    {
+      "idHuria": "H-10.1.1.2",
+      "huria": "HKBP Teladan Medan",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 6300000,
+      "prediksi": 6320604,
+      "galat": 20604
+    },
+    {
+      "idHuria": "H-10.1.1.2",
+      "huria": "HKBP Teladan Medan",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 6363000,
+      "prediksi": 6410623,
+      "galat": 47623
+    },
+    {
+      "idHuria": "H-10.1.1.2",
+      "huria": "HKBP Teladan Medan",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 7700000,
+      "prediksi": 7948665,
+      "galat": 248665
+    },
+    {
+      "idHuria": "H-10.1.1.2",
+      "huria": "HKBP Teladan Medan",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 8162000,
+      "prediksi": 7905750,
+      "galat": -256250
+    },
+    {
+      "idHuria": "H-10.1.1.2",
+      "huria": "HKBP Teladan Medan",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 7238000,
+      "prediksi": 8002708,
+      "galat": 764708
+    },
+    {
+      "idHuria": "H-10.1.1.2",
+      "huria": "HKBP Teladan Medan",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 7700000,
+      "prediksi": 7893340,
+      "galat": 193340
+    },
+    {
+      "idHuria": "H-10.1.1.2",
+      "huria": "HKBP Teladan Medan",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 7469000,
+      "prediksi": 7820173,
+      "galat": 351173
+    },
+    {
+      "idHuria": "H-10.1.1.2",
+      "huria": "HKBP Teladan Medan",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 7623000,
+      "prediksi": 7846492,
+      "galat": 223492
+    },
+    {
+      "idHuria": "H-10.1.1.2",
+      "huria": "HKBP Teladan Medan",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 7700000,
+      "prediksi": 7555095,
+      "galat": -144905
+    },
+    {
+      "idHuria": "H-10.1.1.2",
+      "huria": "HKBP Teladan Medan",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 7777000,
+      "prediksi": 7725957,
+      "galat": -51043
+    },
+    {
+      "idHuria": "H-10.2.1.1",
+      "huria": "HKBP Glugur",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 4446000,
+      "prediksi": 4217296,
+      "galat": -228704
+    },
+    {
+      "idHuria": "H-10.2.1.1",
+      "huria": "HKBP Glugur",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 4446000,
+      "prediksi": 4166355,
+      "galat": -279645
+    },
+    {
+      "idHuria": "H-10.2.1.1",
+      "huria": "HKBP Glugur",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 4018500,
+      "prediksi": 4308602,
+      "galat": 290102
+    },
+    {
+      "idHuria": "H-10.2.1.1",
+      "huria": "HKBP Glugur",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 4317750,
+      "prediksi": 4242387,
+      "galat": -75363
+    },
+    {
+      "idHuria": "H-10.2.1.1",
+      "huria": "HKBP Glugur",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 4061250,
+      "prediksi": 4086973,
+      "galat": 25723
+    },
+    {
+      "idHuria": "H-10.2.1.1",
+      "huria": "HKBP Glugur",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 4232250,
+      "prediksi": 4208475,
+      "galat": -23775
+    },
+    {
+      "idHuria": "H-10.2.1.1",
+      "huria": "HKBP Glugur",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 4403250,
+      "prediksi": 4113045,
+      "galat": -290205
+    },
+    {
+      "idHuria": "H-10.2.1.1",
+      "huria": "HKBP Glugur",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 4275000,
+      "prediksi": 4250658,
+      "galat": -24342
+    },
+    {
+      "idHuria": "H-10.2.1.1",
+      "huria": "HKBP Glugur",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 5434000,
+      "prediksi": 5096409,
+      "galat": -337591
+    },
+    {
+      "idHuria": "H-10.2.1.1",
+      "huria": "HKBP Glugur",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 5434000,
+      "prediksi": 5165994,
+      "galat": -268006
+    },
+    {
+      "idHuria": "H-10.2.1.1",
+      "huria": "HKBP Glugur",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 4911500,
+      "prediksi": 5283567,
+      "galat": 372067
+    },
+    {
+      "idHuria": "H-10.2.1.1",
+      "huria": "HKBP Glugur",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 5277250,
+      "prediksi": 5093778,
+      "galat": -183472
+    },
+    {
+      "idHuria": "H-10.2.1.1",
+      "huria": "HKBP Glugur",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 4963750,
+      "prediksi": 5135546,
+      "galat": 171796
+    },
+    {
+      "idHuria": "H-10.2.1.1",
+      "huria": "HKBP Glugur",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 5172750,
+      "prediksi": 5040551,
+      "galat": -132199
+    },
+    {
+      "idHuria": "H-10.2.1.1",
+      "huria": "HKBP Glugur",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 5381750,
+      "prediksi": 5059473,
+      "galat": -322277
+    },
+    {
+      "idHuria": "H-10.2.1.1",
+      "huria": "HKBP Glugur",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 5225000,
+      "prediksi": 5203209,
+      "galat": -21791
+    },
+    {
+      "idHuria": "H-10.2.1.2",
+      "huria": "HKBP Percut Sei Tuan",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 2845800,
+      "prediksi": 2785512,
+      "galat": -60288
+    },
+    {
+      "idHuria": "H-10.2.1.2",
+      "huria": "HKBP Percut Sei Tuan",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 2957400,
+      "prediksi": 2813713,
+      "galat": -143687
+    },
+    {
+      "idHuria": "H-10.2.1.2",
+      "huria": "HKBP Percut Sei Tuan",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 2706300,
+      "prediksi": 2801924,
+      "galat": 95624
+    },
+    {
+      "idHuria": "H-10.2.1.2",
+      "huria": "HKBP Percut Sei Tuan",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 2985300,
+      "prediksi": 2813384,
+      "galat": -171916
+    },
+    {
+      "idHuria": "H-10.2.1.2",
+      "huria": "HKBP Percut Sei Tuan",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 2790000,
+      "prediksi": 2810670,
+      "galat": 20670
+    },
+    {
+      "idHuria": "H-10.2.1.2",
+      "huria": "HKBP Percut Sei Tuan",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 2873700,
+      "prediksi": 2852576,
+      "galat": -21124
+    },
+    {
+      "idHuria": "H-10.2.1.2",
+      "huria": "HKBP Percut Sei Tuan",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 2873700,
+      "prediksi": 2775266,
+      "galat": -98434
+    },
+    {
+      "idHuria": "H-10.2.1.2",
+      "huria": "HKBP Percut Sei Tuan",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Pagi (Bahasa Batak)",
+      "aktual": 2762100,
+      "prediksi": 2802400,
+      "galat": 40300
+    },
+    {
+      "idHuria": "H-10.2.1.2",
+      "huria": "HKBP Percut Sei Tuan",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 3478200,
+      "prediksi": 3420120,
+      "galat": -58080
+    },
+    {
+      "idHuria": "H-10.2.1.2",
+      "huria": "HKBP Percut Sei Tuan",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 3614600,
+      "prediksi": 3414628,
+      "galat": -199972
+    },
+    {
+      "idHuria": "H-10.2.1.2",
+      "huria": "HKBP Percut Sei Tuan",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 3307700,
+      "prediksi": 3476564,
+      "galat": 168864
+    },
+    {
+      "idHuria": "H-10.2.1.2",
+      "huria": "HKBP Percut Sei Tuan",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 3648700,
+      "prediksi": 3449993,
+      "galat": -198707
+    },
+    {
+      "idHuria": "H-10.2.1.2",
+      "huria": "HKBP Percut Sei Tuan",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 3410000,
+      "prediksi": 3463763,
+      "galat": 53763
+    },
+    {
+      "idHuria": "H-10.2.1.2",
+      "huria": "HKBP Percut Sei Tuan",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 3512300,
+      "prediksi": 3456063,
+      "galat": -56237
+    },
+    {
+      "idHuria": "H-10.2.1.2",
+      "huria": "HKBP Percut Sei Tuan",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 3512300,
+      "prediksi": 3408129,
+      "galat": -104171
+    },
+    {
+      "idHuria": "H-10.2.1.2",
+      "huria": "HKBP Percut Sei Tuan",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 3375900,
+      "prediksi": 3464881,
+      "galat": 88981
+    },
+    {
+      "idHuria": "H-2.1.1.1",
+      "huria": "HKBP Pearaja Tarutung",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 11349000,
+      "prediksi": 11809839,
+      "galat": 460839
+    },
+    {
+      "idHuria": "H-2.1.1.1",
+      "huria": "HKBP Pearaja Tarutung",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 11917000,
+      "prediksi": 11743316,
+      "galat": -173684
+    },
+    {
+      "idHuria": "H-2.1.1.1",
+      "huria": "HKBP Pearaja Tarutung",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 11489000,
+      "prediksi": 11770603,
+      "galat": 281603
+    },
+    {
+      "idHuria": "H-2.1.1.1",
+      "huria": "HKBP Pearaja Tarutung",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 12435000,
+      "prediksi": 11732252,
+      "galat": -702748
+    },
+    {
+      "idHuria": "H-2.1.1.1",
+      "huria": "HKBP Pearaja Tarutung",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 11927000,
+      "prediksi": 11933789,
+      "galat": 6789
+    },
+    {
+      "idHuria": "H-2.1.1.1",
+      "huria": "HKBP Pearaja Tarutung",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 11537000,
+      "prediksi": 11962795,
+      "galat": 425795
+    },
+    {
+      "idHuria": "H-2.1.1.1",
+      "huria": "HKBP Pearaja Tarutung",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 12291000,
+      "prediksi": 11732252,
+      "galat": -558748
+    },
+    {
+      "idHuria": "H-2.1.1.1",
+      "huria": "HKBP Pearaja Tarutung",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 12180000,
+      "prediksi": 11940951,
+      "galat": -239049
+    },
+    {
+      "idHuria": "H-2.1.1.2",
+      "huria": "HKBP Saitnihuta",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6081000,
+      "prediksi": 6470078,
+      "galat": 389078
+    },
+    {
+      "idHuria": "H-2.1.1.2",
+      "huria": "HKBP Saitnihuta",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6814000,
+      "prediksi": 6461604,
+      "galat": -352396
+    },
+    {
+      "idHuria": "H-2.1.1.2",
+      "huria": "HKBP Saitnihuta",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6286000,
+      "prediksi": 6440319,
+      "galat": 154319
+    },
+    {
+      "idHuria": "H-2.1.1.2",
+      "huria": "HKBP Saitnihuta",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6091000,
+      "prediksi": 6472478,
+      "galat": 381478
+    },
+    {
+      "idHuria": "H-2.1.1.2",
+      "huria": "HKBP Saitnihuta",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6806000,
+      "prediksi": 6463330,
+      "galat": -342670
+    },
+    {
+      "idHuria": "H-2.1.1.2",
+      "huria": "HKBP Saitnihuta",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6463000,
+      "prediksi": 6450997,
+      "galat": -12003
+    },
+    {
+      "idHuria": "H-2.1.1.2",
+      "huria": "HKBP Saitnihuta",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6116000,
+      "prediksi": 6486906,
+      "galat": 370906
+    },
+    {
+      "idHuria": "H-2.1.1.2",
+      "huria": "HKBP Saitnihuta",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6843000,
+      "prediksi": 6469741,
+      "galat": -373259
+    },
+    {
+      "idHuria": "H-2.1.2.1",
+      "huria": "HKBP Dame Tarutung",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8099000,
+      "prediksi": 8644046,
+      "galat": 545046
+    },
+    {
+      "idHuria": "H-2.1.2.1",
+      "huria": "HKBP Dame Tarutung",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8068000,
+      "prediksi": 8456243,
+      "galat": 388243
+    },
+    {
+      "idHuria": "H-2.1.2.1",
+      "huria": "HKBP Dame Tarutung",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9178000,
+      "prediksi": 8175183,
+      "galat": -1002817
+    },
+    {
+      "idHuria": "H-2.1.2.1",
+      "huria": "HKBP Dame Tarutung",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8979000,
+      "prediksi": 8518904,
+      "galat": -460096
+    },
+    {
+      "idHuria": "H-2.1.2.1",
+      "huria": "HKBP Dame Tarutung",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8763000,
+      "prediksi": 9192289,
+      "galat": 429289
+    },
+    {
+      "idHuria": "H-2.1.2.1",
+      "huria": "HKBP Dame Tarutung",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8276000,
+      "prediksi": 8708742,
+      "galat": 432742
+    },
+    {
+      "idHuria": "H-2.1.2.1",
+      "huria": "HKBP Dame Tarutung",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8080000,
+      "prediksi": 8564422,
+      "galat": 484422
+    },
+    {
+      "idHuria": "H-2.1.2.1",
+      "huria": "HKBP Dame Tarutung",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8227000,
+      "prediksi": 8284796,
+      "galat": 57796
+    },
+    {
+      "idHuria": "H-2.1.2.2",
+      "huria": "HKBP Hutabarat",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 5294000,
+      "prediksi": 4866759,
+      "galat": -427241
+    },
+    {
+      "idHuria": "H-2.1.2.2",
+      "huria": "HKBP Hutabarat",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4942000,
+      "prediksi": 5016438,
+      "galat": 74438
+    },
+    {
+      "idHuria": "H-2.1.2.2",
+      "huria": "HKBP Hutabarat",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4939000,
+      "prediksi": 5033142,
+      "galat": 94142
+    },
+    {
+      "idHuria": "H-2.1.2.2",
+      "huria": "HKBP Hutabarat",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4698000,
+      "prediksi": 4961100,
+      "galat": 263100
+    },
+    {
+      "idHuria": "H-2.1.2.2",
+      "huria": "HKBP Hutabarat",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4972000,
+      "prediksi": 4824180,
+      "galat": -147820
+    },
+    {
+      "idHuria": "H-2.1.2.2",
+      "huria": "HKBP Hutabarat",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4657000,
+      "prediksi": 4798926,
+      "galat": 141926
+    },
+    {
+      "idHuria": "H-2.1.2.2",
+      "huria": "HKBP Hutabarat",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4860000,
+      "prediksi": 4797766,
+      "galat": -62234
+    },
+    {
+      "idHuria": "H-2.1.2.2",
+      "huria": "HKBP Hutabarat",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4853000,
+      "prediksi": 4781409,
+      "galat": -71591
+    },
+    {
+      "idHuria": "H-2.2.1.1",
+      "huria": "HKBP Balige Kota",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 11889000,
+      "prediksi": 10595719,
+      "galat": -1293281
+    },
+    {
+      "idHuria": "H-2.2.1.1",
+      "huria": "HKBP Balige Kota",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 10722000,
+      "prediksi": 10916617,
+      "galat": 194617
+    },
+    {
+      "idHuria": "H-2.2.1.1",
+      "huria": "HKBP Balige Kota",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 11779000,
+      "prediksi": 10827983,
+      "galat": -951017
+    },
+    {
+      "idHuria": "H-2.2.1.1",
+      "huria": "HKBP Balige Kota",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 11399000,
+      "prediksi": 10928667,
+      "galat": -470333
+    },
+    {
+      "idHuria": "H-2.2.1.1",
+      "huria": "HKBP Balige Kota",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 10797000,
+      "prediksi": 11629011,
+      "galat": 832011
+    },
+    {
+      "idHuria": "H-2.2.1.1",
+      "huria": "HKBP Balige Kota",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 10877000,
+      "prediksi": 10817984,
+      "galat": -59016
+    },
+    {
+      "idHuria": "H-2.2.1.1",
+      "huria": "HKBP Balige Kota",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 11393000,
+      "prediksi": 10797946,
+      "galat": -595054
+    },
+    {
+      "idHuria": "H-2.2.1.1",
+      "huria": "HKBP Balige Kota",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 10955000,
+      "prediksi": 10937511,
+      "galat": -17489
+    },
+    {
+      "idHuria": "H-2.2.1.2",
+      "huria": "HKBP Soposurung",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6665000,
+      "prediksi": 6770717,
+      "galat": 105717
+    },
+    {
+      "idHuria": "H-2.2.1.2",
+      "huria": "HKBP Soposurung",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6662000,
+      "prediksi": 6734235,
+      "galat": 72235
+    },
+    {
+      "idHuria": "H-2.2.1.2",
+      "huria": "HKBP Soposurung",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6628000,
+      "prediksi": 6726440,
+      "galat": 98440
+    },
+    {
+      "idHuria": "H-2.2.1.2",
+      "huria": "HKBP Soposurung",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6913000,
+      "prediksi": 6719392,
+      "galat": -193608
+    },
+    {
+      "idHuria": "H-2.2.1.2",
+      "huria": "HKBP Soposurung",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 7234000,
+      "prediksi": 6788880,
+      "galat": -445120
+    },
+    {
+      "idHuria": "H-2.2.1.2",
+      "huria": "HKBP Soposurung",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6470000,
+      "prediksi": 6823268,
+      "galat": 353268
+    },
+    {
+      "idHuria": "H-2.2.1.2",
+      "huria": "HKBP Soposurung",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6712000,
+      "prediksi": 6734235,
+      "galat": 22235
+    },
+    {
+      "idHuria": "H-2.2.1.2",
+      "huria": "HKBP Soposurung",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 7184000,
+      "prediksi": 6724086,
+      "galat": -459914
+    },
+    {
+      "idHuria": "H-2.2.2.1",
+      "huria": "HKBP Laguboti Kota",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9116000,
+      "prediksi": 9303054,
+      "galat": 187054
+    },
+    {
+      "idHuria": "H-2.2.2.1",
+      "huria": "HKBP Laguboti Kota",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8915000,
+      "prediksi": 9318660,
+      "galat": 403660
+    },
+    {
+      "idHuria": "H-2.2.2.1",
+      "huria": "HKBP Laguboti Kota",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9208000,
+      "prediksi": 9187628,
+      "galat": -20372
+    },
+    {
+      "idHuria": "H-2.2.2.1",
+      "huria": "HKBP Laguboti Kota",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9103000,
+      "prediksi": 9055031,
+      "galat": -47969
+    },
+    {
+      "idHuria": "H-2.2.2.1",
+      "huria": "HKBP Laguboti Kota",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9156000,
+      "prediksi": 9303967,
+      "galat": 147967
+    },
+    {
+      "idHuria": "H-2.2.2.1",
+      "huria": "HKBP Laguboti Kota",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8872000,
+      "prediksi": 9283896,
+      "galat": 411896
+    },
+    {
+      "idHuria": "H-2.2.2.1",
+      "huria": "HKBP Laguboti Kota",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9071000,
+      "prediksi": 9019133,
+      "galat": -51867
+    },
+    {
+      "idHuria": "H-2.2.2.1",
+      "huria": "HKBP Laguboti Kota",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8550000,
+      "prediksi": 8859641,
+      "galat": 309641
+    },
+    {
+      "idHuria": "H-2.2.2.2",
+      "huria": "HKBP Haunatas",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3853000,
+      "prediksi": 4092450,
+      "galat": 239450
+    },
+    {
+      "idHuria": "H-2.2.2.2",
+      "huria": "HKBP Haunatas",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3981000,
+      "prediksi": 4067858,
+      "galat": 86858
+    },
+    {
+      "idHuria": "H-2.2.2.2",
+      "huria": "HKBP Haunatas",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4037000,
+      "prediksi": 3915430,
+      "galat": -121570
+    },
+    {
+      "idHuria": "H-2.2.2.2",
+      "huria": "HKBP Haunatas",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4107000,
+      "prediksi": 3938472,
+      "galat": -168528
+    },
+    {
+      "idHuria": "H-2.2.2.2",
+      "huria": "HKBP Haunatas",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3940000,
+      "prediksi": 3945163,
+      "galat": 5163
+    },
+    {
+      "idHuria": "H-2.2.2.2",
+      "huria": "HKBP Haunatas",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3865000,
+      "prediksi": 4005548,
+      "galat": 140548
+    },
+    {
+      "idHuria": "H-2.2.2.2",
+      "huria": "HKBP Haunatas",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4336000,
+      "prediksi": 3884070,
+      "galat": -451930
+    },
+    {
+      "idHuria": "H-2.2.2.2",
+      "huria": "HKBP Haunatas",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4048000,
+      "prediksi": 3962445,
+      "galat": -85555
+    },
+    {
+      "idHuria": "H-3.1.1.1",
+      "huria": "HKBP Doloksanggul Kota",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 14777000,
+      "prediksi": 15284057,
+      "galat": 507057
+    },
+    {
+      "idHuria": "H-3.1.1.1",
+      "huria": "HKBP Doloksanggul Kota",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 14837000,
+      "prediksi": 15272560,
+      "galat": 435560
+    },
+    {
+      "idHuria": "H-3.1.1.1",
+      "huria": "HKBP Doloksanggul Kota",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 15818000,
+      "prediksi": 15118979,
+      "galat": -699021
+    },
+    {
+      "idHuria": "H-3.1.1.1",
+      "huria": "HKBP Doloksanggul Kota",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 15923000,
+      "prediksi": 15222625,
+      "galat": -700375
+    },
+    {
+      "idHuria": "H-3.1.1.1",
+      "huria": "HKBP Doloksanggul Kota",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 16422000,
+      "prediksi": 15332178,
+      "galat": -1089822
+    },
+    {
+      "idHuria": "H-3.1.1.1",
+      "huria": "HKBP Doloksanggul Kota",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 15627000,
+      "prediksi": 14960268,
+      "galat": -666732
+    },
+    {
+      "idHuria": "H-3.1.1.1",
+      "huria": "HKBP Doloksanggul Kota",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 16131000,
+      "prediksi": 14988602,
+      "galat": -1142398
+    },
+    {
+      "idHuria": "H-3.1.1.1",
+      "huria": "HKBP Doloksanggul Kota",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 14838000,
+      "prediksi": 15303384,
+      "galat": 465384
+    },
+    {
+      "idHuria": "H-3.1.1.2",
+      "huria": "HKBP Matiti",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 7067000,
+      "prediksi": 6858333,
+      "galat": -208667
+    },
+    {
+      "idHuria": "H-3.1.1.2",
+      "huria": "HKBP Matiti",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 7517000,
+      "prediksi": 6931795,
+      "galat": -585205
+    },
+    {
+      "idHuria": "H-3.1.1.2",
+      "huria": "HKBP Matiti",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 7431000,
+      "prediksi": 7044035,
+      "galat": -386965
+    },
+    {
+      "idHuria": "H-3.1.1.2",
+      "huria": "HKBP Matiti",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6806000,
+      "prediksi": 7542183,
+      "galat": 736183
+    },
+    {
+      "idHuria": "H-3.1.1.2",
+      "huria": "HKBP Matiti",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6992000,
+      "prediksi": 6898674,
+      "galat": -93326
+    },
+    {
+      "idHuria": "H-3.1.1.2",
+      "huria": "HKBP Matiti",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6882000,
+      "prediksi": 6926298,
+      "galat": 44298
+    },
+    {
+      "idHuria": "H-3.1.1.2",
+      "huria": "HKBP Matiti",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6638000,
+      "prediksi": 6927143,
+      "galat": 289143
+    },
+    {
+      "idHuria": "H-3.1.1.2",
+      "huria": "HKBP Matiti",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 7443000,
+      "prediksi": 6719392,
+      "galat": -723608
+    },
+    {
+      "idHuria": "H-3.2.1.1",
+      "huria": "HKBP Parsaoran Nauli",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8609000,
+      "prediksi": 8480298,
+      "galat": -128702
+    },
+    {
+      "idHuria": "H-3.2.1.1",
+      "huria": "HKBP Parsaoran Nauli",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9086000,
+      "prediksi": 8502581,
+      "galat": -583419
+    },
+    {
+      "idHuria": "H-3.2.1.1",
+      "huria": "HKBP Parsaoran Nauli",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8671000,
+      "prediksi": 8765181,
+      "galat": 94181
+    },
+    {
+      "idHuria": "H-3.2.1.1",
+      "huria": "HKBP Parsaoran Nauli",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8677000,
+      "prediksi": 8766587,
+      "galat": 89587
+    },
+    {
+      "idHuria": "H-3.2.1.1",
+      "huria": "HKBP Parsaoran Nauli",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8900000,
+      "prediksi": 8648522,
+      "galat": -251478
+    },
+    {
+      "idHuria": "H-3.2.1.1",
+      "huria": "HKBP Parsaoran Nauli",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9115000,
+      "prediksi": 8738140,
+      "galat": -376860
+    },
+    {
+      "idHuria": "H-3.2.1.1",
+      "huria": "HKBP Parsaoran Nauli",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8909000,
+      "prediksi": 8901692,
+      "galat": -7308
+    },
+    {
+      "idHuria": "H-3.2.1.1",
+      "huria": "HKBP Parsaoran Nauli",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8245000,
+      "prediksi": 9142814,
+      "galat": 897814
+    },
+    {
+      "idHuria": "H-3.2.1.2",
+      "huria": "HKBP Banualuhu",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 5122000,
+      "prediksi": 5291440,
+      "galat": 169440
+    },
+    {
+      "idHuria": "H-3.2.1.2",
+      "huria": "HKBP Banualuhu",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 5652000,
+      "prediksi": 5297306,
+      "galat": -354694
+    },
+    {
+      "idHuria": "H-3.2.1.2",
+      "huria": "HKBP Banualuhu",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 5434000,
+      "prediksi": 5344090,
+      "galat": -89910
+    },
+    {
+      "idHuria": "H-3.2.1.2",
+      "huria": "HKBP Banualuhu",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 5298000,
+      "prediksi": 5394923,
+      "galat": 96923
+    },
+    {
+      "idHuria": "H-3.2.1.2",
+      "huria": "HKBP Banualuhu",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 5590000,
+      "prediksi": 5375911,
+      "galat": -214089
+    },
+    {
+      "idHuria": "H-3.2.1.2",
+      "huria": "HKBP Banualuhu",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 5259000,
+      "prediksi": 5411970,
+      "galat": 152970
+    },
+    {
+      "idHuria": "H-3.2.1.2",
+      "huria": "HKBP Banualuhu",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 5448000,
+      "prediksi": 5343881,
+      "galat": -104119
+    },
+    {
+      "idHuria": "H-3.2.1.2",
+      "huria": "HKBP Banualuhu",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 5155000,
+      "prediksi": 5338278,
+      "galat": 183278
+    },
+    {
+      "idHuria": "HK-03-01-01",
+      "huria": "HKBP Sihotang",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 12737000,
+      "prediksi": 12738437,
+      "galat": 1437
+    },
+    {
+      "idHuria": "HK-03-01-01",
+      "huria": "HKBP Sihotang",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 13338000,
+      "prediksi": 12738437,
+      "galat": -599563
+    },
+    {
+      "idHuria": "HK-03-01-01",
+      "huria": "HKBP Sihotang",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 13306000,
+      "prediksi": 12864978,
+      "galat": -441022
+    },
+    {
+      "idHuria": "HK-03-01-01",
+      "huria": "HKBP Sihotang",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 12872000,
+      "prediksi": 12910706,
+      "galat": 38706
+    },
+    {
+      "idHuria": "HK-03-01-01",
+      "huria": "HKBP Sihotang",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 13784000,
+      "prediksi": 12872381,
+      "galat": -911619
+    },
+    {
+      "idHuria": "HK-03-01-01",
+      "huria": "HKBP Sihotang",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 13263000,
+      "prediksi": 12963961,
+      "galat": -299039
+    },
+    {
+      "idHuria": "HK-03-01-01",
+      "huria": "HKBP Sihotang",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 13223000,
+      "prediksi": 12936917,
+      "galat": -286083
+    },
+    {
+      "idHuria": "HK-03-01-01",
+      "huria": "HKBP Sihotang",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 12496000,
+      "prediksi": 12904915,
+      "galat": 408915
+    },
+    {
+      "idHuria": "HK-03-01-02",
+      "huria": "HKBP Pakkat",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 10658000,
+      "prediksi": 10058313,
+      "galat": -599687
+    },
+    {
+      "idHuria": "HK-03-01-02",
+      "huria": "HKBP Pakkat",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9946000,
+      "prediksi": 10090587,
+      "galat": 144587
+    },
+    {
+      "idHuria": "HK-03-01-02",
+      "huria": "HKBP Pakkat",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 10478000,
+      "prediksi": 10116459,
+      "galat": -361541
+    },
+    {
+      "idHuria": "HK-03-01-02",
+      "huria": "HKBP Pakkat",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 10044000,
+      "prediksi": 10180584,
+      "galat": 136584
+    },
+    {
+      "idHuria": "HK-03-01-02",
+      "huria": "HKBP Pakkat",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 10790000,
+      "prediksi": 10200709,
+      "galat": -589291
+    },
+    {
+      "idHuria": "HK-03-01-02",
+      "huria": "HKBP Pakkat",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 10195000,
+      "prediksi": 10227528,
+      "galat": 32528
+    },
+    {
+      "idHuria": "HK-03-01-02",
+      "huria": "HKBP Pakkat",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 10159000,
+      "prediksi": 10110309,
+      "galat": -48691
+    },
+    {
+      "idHuria": "HK-03-01-02",
+      "huria": "HKBP Pakkat",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 10982000,
+      "prediksi": 10218856,
+      "galat": -763144
+    },
+    {
+      "idHuria": "HK-03-02-01",
+      "huria": "HKBP Siborongborong",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3412000,
+      "prediksi": 3522209,
+      "galat": 110209
+    },
+    {
+      "idHuria": "HK-03-02-01",
+      "huria": "HKBP Siborongborong",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3716000,
+      "prediksi": 3472498,
+      "galat": -243502
+    },
+    {
+      "idHuria": "HK-03-02-01",
+      "huria": "HKBP Siborongborong",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3385000,
+      "prediksi": 3523094,
+      "galat": 138094
+    },
+    {
+      "idHuria": "HK-03-02-01",
+      "huria": "HKBP Siborongborong",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3464000,
+      "prediksi": 3524397,
+      "galat": 60397
+    },
+    {
+      "idHuria": "HK-03-02-01",
+      "huria": "HKBP Siborongborong",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3646000,
+      "prediksi": 3446463,
+      "galat": -199537
+    },
+    {
+      "idHuria": "HK-03-02-01",
+      "huria": "HKBP Siborongborong",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3694000,
+      "prediksi": 3484058,
+      "galat": -209942
+    },
+    {
+      "idHuria": "HK-03-02-01",
+      "huria": "HKBP Siborongborong",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3257000,
+      "prediksi": 3551729,
+      "galat": 294729
+    },
+    {
+      "idHuria": "HK-03-02-01",
+      "huria": "HKBP Siborongborong",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3593000,
+      "prediksi": 3523924,
+      "galat": -69076
+    },
+    {
+      "idHuria": "HK-03-02-02",
+      "huria": "HKBP Parbubu",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 12700000,
+      "prediksi": 11693105,
+      "galat": -1006895
+    },
+    {
+      "idHuria": "HK-03-02-02",
+      "huria": "HKBP Parbubu",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 12682000,
+      "prediksi": 11997213,
+      "galat": -684787
+    },
+    {
+      "idHuria": "HK-03-02-02",
+      "huria": "HKBP Parbubu",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 11925000,
+      "prediksi": 12326487,
+      "galat": 401487
+    },
+    {
+      "idHuria": "HK-03-02-02",
+      "huria": "HKBP Parbubu",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 11733000,
+      "prediksi": 12029840,
+      "galat": 296840
+    },
+    {
+      "idHuria": "HK-03-02-02",
+      "huria": "HKBP Parbubu",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 12135000,
+      "prediksi": 11795061,
+      "galat": -339939
+    },
+    {
+      "idHuria": "HK-03-02-02",
+      "huria": "HKBP Parbubu",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 11933000,
+      "prediksi": 11921527,
+      "galat": -11473
+    },
+    {
+      "idHuria": "HK-03-02-02",
+      "huria": "HKBP Parbubu",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 11748000,
+      "prediksi": 11982850,
+      "galat": 234850
+    },
+    {
+      "idHuria": "HK-03-02-02",
+      "huria": "HKBP Parbubu",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 11894000,
+      "prediksi": 11749475,
+      "galat": -144525
+    },
+    {
+      "idHuria": "HK-05-01-01",
+      "huria": "HKBP Parparean",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3808000,
+      "prediksi": 3890596,
+      "galat": 82596
+    },
+    {
+      "idHuria": "HK-05-01-01",
+      "huria": "HKBP Parparean",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4073000,
+      "prediksi": 3882108,
+      "galat": -190892
+    },
+    {
+      "idHuria": "HK-05-01-01",
+      "huria": "HKBP Parparean",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3701000,
+      "prediksi": 3913705,
+      "galat": 212705
+    },
+    {
+      "idHuria": "HK-05-01-01",
+      "huria": "HKBP Parparean",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4025000,
+      "prediksi": 3847541,
+      "galat": -177459
+    },
+    {
+      "idHuria": "HK-05-01-01",
+      "huria": "HKBP Parparean",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3760000,
+      "prediksi": 3838176,
+      "galat": 78176
+    },
+    {
+      "idHuria": "HK-05-01-01",
+      "huria": "HKBP Parparean",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3989000,
+      "prediksi": 3820666,
+      "galat": -168334
+    },
+    {
+      "idHuria": "HK-05-01-01",
+      "huria": "HKBP Parparean",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3980000,
+      "prediksi": 3836641,
+      "galat": -143359
+    },
+    {
+      "idHuria": "HK-05-01-01",
+      "huria": "HKBP Parparean",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3655000,
+      "prediksi": 3905777,
+      "galat": 250777
+    },
+    {
+      "idHuria": "HK-05-01-02",
+      "huria": "HKBP Sosor Ladang",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 15290000,
+      "prediksi": 14267113,
+      "galat": -1022887
+    },
+    {
+      "idHuria": "HK-05-01-02",
+      "huria": "HKBP Sosor Ladang",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 14160000,
+      "prediksi": 14477184,
+      "galat": 317184
+    },
+    {
+      "idHuria": "HK-05-01-02",
+      "huria": "HKBP Sosor Ladang",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 15144000,
+      "prediksi": 14442586,
+      "galat": -701414
+    },
+    {
+      "idHuria": "HK-05-01-02",
+      "huria": "HKBP Sosor Ladang",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 13876000,
+      "prediksi": 14200434,
+      "galat": 324434
+    },
+    {
+      "idHuria": "HK-05-01-02",
+      "huria": "HKBP Sosor Ladang",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 15252000,
+      "prediksi": 14264163,
+      "galat": -987837
+    },
+    {
+      "idHuria": "HK-05-01-02",
+      "huria": "HKBP Sosor Ladang",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 13492000,
+      "prediksi": 13964285,
+      "galat": 472285
+    },
+    {
+      "idHuria": "HK-05-01-02",
+      "huria": "HKBP Sosor Ladang",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 15184000,
+      "prediksi": 14140137,
+      "galat": -1043863
+    },
+    {
+      "idHuria": "HK-05-01-02",
+      "huria": "HKBP Sosor Ladang",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 13583000,
+      "prediksi": 13803189,
+      "galat": 220189
+    },
+    {
+      "idHuria": "HK-05-02-01",
+      "huria": "HKBP Sigumpar Dolok",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3526000,
+      "prediksi": 3341090,
+      "galat": -184910
+    },
+    {
+      "idHuria": "HK-05-02-01",
+      "huria": "HKBP Sigumpar Dolok",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3544000,
+      "prediksi": 3335832,
+      "galat": -208168
+    },
+    {
+      "idHuria": "HK-05-02-01",
+      "huria": "HKBP Sigumpar Dolok",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3541000,
+      "prediksi": 3409885,
+      "galat": -131115
+    },
+    {
+      "idHuria": "HK-05-02-01",
+      "huria": "HKBP Sigumpar Dolok",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3214000,
+      "prediksi": 3409885,
+      "galat": 195885
+    },
+    {
+      "idHuria": "HK-05-02-01",
+      "huria": "HKBP Sigumpar Dolok",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3135000,
+      "prediksi": 3403888,
+      "galat": 268888
+    },
+    {
+      "idHuria": "HK-05-02-01",
+      "huria": "HKBP Sigumpar Dolok",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3243000,
+      "prediksi": 3238478,
+      "galat": -4522
+    },
+    {
+      "idHuria": "HK-05-02-01",
+      "huria": "HKBP Sigumpar Dolok",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3318000,
+      "prediksi": 3238264,
+      "galat": -79736
+    },
+    {
+      "idHuria": "HK-05-02-01",
+      "huria": "HKBP Sigumpar Dolok",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3325000,
+      "prediksi": 3298617,
+      "galat": -26383
+    },
+    {
+      "idHuria": "HK-05-02-02",
+      "huria": "HKBP Sipinggan",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4336000,
+      "prediksi": 4206858,
+      "galat": -129142
+    },
+    {
+      "idHuria": "HK-05-02-02",
+      "huria": "HKBP Sipinggan",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4081000,
+      "prediksi": 4214781,
+      "galat": 133781
+    },
+    {
+      "idHuria": "HK-05-02-02",
+      "huria": "HKBP Sipinggan",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4593000,
+      "prediksi": 4211470,
+      "galat": -381530
+    },
+    {
+      "idHuria": "HK-05-02-02",
+      "huria": "HKBP Sipinggan",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4218000,
+      "prediksi": 4240360,
+      "galat": 22360
+    },
+    {
+      "idHuria": "HK-05-02-02",
+      "huria": "HKBP Sipinggan",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4266000,
+      "prediksi": 4426027,
+      "galat": 160027
+    },
+    {
+      "idHuria": "HK-05-02-02",
+      "huria": "HKBP Sipinggan",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4144000,
+      "prediksi": 4211744,
+      "galat": 67744
+    },
+    {
+      "idHuria": "HK-05-02-02",
+      "huria": "HKBP Sipinggan",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4369000,
+      "prediksi": 4215679,
+      "galat": -153321
+    },
+    {
+      "idHuria": "HK-05-02-02",
+      "huria": "HKBP Sipinggan",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4626000,
+      "prediksi": 4220614,
+      "galat": -405386
+    },
+    {
+      "idHuria": "HK-05-03-01",
+      "huria": "HKBP Lumban Bulbul",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 10232000,
+      "prediksi": 10749654,
+      "galat": 517654
+    },
+    {
+      "idHuria": "HK-05-03-01",
+      "huria": "HKBP Lumban Bulbul",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 10258000,
+      "prediksi": 10583298,
+      "galat": 325298
+    },
+    {
+      "idHuria": "HK-05-03-01",
+      "huria": "HKBP Lumban Bulbul",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 10171000,
+      "prediksi": 10542394,
+      "galat": 371394
+    },
+    {
+      "idHuria": "HK-05-03-01",
+      "huria": "HKBP Lumban Bulbul",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 10979000,
+      "prediksi": 10513156,
+      "galat": -465844
+    },
+    {
+      "idHuria": "HK-05-03-01",
+      "huria": "HKBP Lumban Bulbul",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 10562000,
+      "prediksi": 10557053,
+      "galat": -4947
+    },
+    {
+      "idHuria": "HK-05-03-01",
+      "huria": "HKBP Lumban Bulbul",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9832000,
+      "prediksi": 10528443,
+      "galat": 696443
+    },
+    {
+      "idHuria": "HK-05-03-01",
+      "huria": "HKBP Lumban Bulbul",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 10820000,
+      "prediksi": 10372215,
+      "galat": -447785
+    },
+    {
+      "idHuria": "HK-05-03-01",
+      "huria": "HKBP Lumban Bulbul",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 10077000,
+      "prediksi": 10430623,
+      "galat": 353623
+    },
+    {
+      "idHuria": "HK-05-03-02",
+      "huria": "HKBP Siraja Hutagalung",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8989000,
+      "prediksi": 8969476,
+      "galat": -19524
+    },
+    {
+      "idHuria": "HK-05-03-02",
+      "huria": "HKBP Siraja Hutagalung",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8805000,
+      "prediksi": 8906749,
+      "galat": 101749
+    },
+    {
+      "idHuria": "HK-05-03-02",
+      "huria": "HKBP Siraja Hutagalung",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9353000,
+      "prediksi": 8836494,
+      "galat": -516506
+    },
+    {
+      "idHuria": "HK-05-03-02",
+      "huria": "HKBP Siraja Hutagalung",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9369000,
+      "prediksi": 8855282,
+      "galat": -513718
+    },
+    {
+      "idHuria": "HK-05-03-02",
+      "huria": "HKBP Siraja Hutagalung",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8995000,
+      "prediksi": 9350092,
+      "galat": 355092
+    },
+    {
+      "idHuria": "HK-05-03-02",
+      "huria": "HKBP Siraja Hutagalung",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9704000,
+      "prediksi": 9309040,
+      "galat": -394960
+    },
+    {
+      "idHuria": "HK-05-03-02",
+      "huria": "HKBP Siraja Hutagalung",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9303000,
+      "prediksi": 9370640,
+      "galat": 67640
+    },
+    {
+      "idHuria": "HK-05-03-02",
+      "huria": "HKBP Siraja Hutagalung",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9439000,
+      "prediksi": 9455723,
+      "galat": 16723
+    },
+    {
+      "idHuria": "HK-06-01-01",
+      "huria": "HKBP Siantar Kota",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8564000,
+      "prediksi": 9236696,
+      "galat": 672696
+    },
+    {
+      "idHuria": "HK-06-01-01",
+      "huria": "HKBP Siantar Kota",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8655000,
+      "prediksi": 8684814,
+      "galat": 29814
+    },
+    {
+      "idHuria": "HK-06-01-01",
+      "huria": "HKBP Siantar Kota",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9045000,
+      "prediksi": 8653810,
+      "galat": -391190
+    },
+    {
+      "idHuria": "HK-06-01-01",
+      "huria": "HKBP Siantar Kota",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8675000,
+      "prediksi": 8766264,
+      "galat": 91264
+    },
+    {
+      "idHuria": "HK-06-01-01",
+      "huria": "HKBP Siantar Kota",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9212000,
+      "prediksi": 8766587,
+      "galat": -445413
+    },
+    {
+      "idHuria": "HK-06-01-01",
+      "huria": "HKBP Siantar Kota",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9117000,
+      "prediksi": 8780441,
+      "galat": -336559
+    },
+    {
+      "idHuria": "HK-06-01-01",
+      "huria": "HKBP Siantar Kota",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9592000,
+      "prediksi": 9287539,
+      "galat": -304461
+    },
+    {
+      "idHuria": "HK-06-01-01",
+      "huria": "HKBP Siantar Kota",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9021000,
+      "prediksi": 9312287,
+      "galat": 291287
+    },
+    {
+      "idHuria": "HK-06-01-02",
+      "huria": "HKBP Parluasan",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6636000,
+      "prediksi": 6745276,
+      "galat": 109276
+    },
+    {
+      "idHuria": "HK-06-01-02",
+      "huria": "HKBP Parluasan",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6495000,
+      "prediksi": 6733550,
+      "galat": 238550
+    },
+    {
+      "idHuria": "HK-06-01-02",
+      "huria": "HKBP Parluasan",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6780000,
+      "prediksi": 6682829,
+      "galat": -97171
+    },
+    {
+      "idHuria": "HK-06-01-02",
+      "huria": "HKBP Parluasan",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6248000,
+      "prediksi": 6675835,
+      "galat": 427835
+    },
+    {
+      "idHuria": "HK-06-01-02",
+      "huria": "HKBP Parluasan",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6602000,
+      "prediksi": 6465164,
+      "galat": -136836
+    },
+    {
+      "idHuria": "HK-06-01-02",
+      "huria": "HKBP Parluasan",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6959000,
+      "prediksi": 6465443,
+      "galat": -493557
+    },
+    {
+      "idHuria": "HK-06-01-02",
+      "huria": "HKBP Parluasan",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6523000,
+      "prediksi": 6711975,
+      "galat": 188975
+    },
+    {
+      "idHuria": "HK-06-01-02",
+      "huria": "HKBP Parluasan",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6702000,
+      "prediksi": 6527306,
+      "galat": -174694
+    },
+    {
+      "idHuria": "HK-06-01-03",
+      "huria": "HKBP Sutomo Siantar",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 12389000,
+      "prediksi": 12219321,
+      "galat": -169679
+    },
+    {
+      "idHuria": "HK-06-01-03",
+      "huria": "HKBP Sutomo Siantar",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 13457000,
+      "prediksi": 12302742,
+      "galat": -1154258
+    },
+    {
+      "idHuria": "HK-06-01-03",
+      "huria": "HKBP Sutomo Siantar",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 12732000,
+      "prediksi": 12847973,
+      "galat": 115973
+    },
+    {
+      "idHuria": "HK-06-01-03",
+      "huria": "HKBP Sutomo Siantar",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 11972000,
+      "prediksi": 12867150,
+      "galat": 895150
+    },
+    {
+      "idHuria": "HK-06-01-03",
+      "huria": "HKBP Sutomo Siantar",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 12802000,
+      "prediksi": 12588396,
+      "galat": -213604
+    },
+    {
+      "idHuria": "HK-06-01-03",
+      "huria": "HKBP Sutomo Siantar",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 13627000,
+      "prediksi": 12718171,
+      "galat": -908829
+    },
+    {
+      "idHuria": "HK-06-01-03",
+      "huria": "HKBP Sutomo Siantar",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 12597000,
+      "prediksi": 12931156,
+      "galat": 334156
+    },
+    {
+      "idHuria": "HK-06-01-03",
+      "huria": "HKBP Sutomo Siantar",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 12823000,
+      "prediksi": 12900637,
+      "galat": 77637
+    },
+    {
+      "idHuria": "HK-06-01-04",
+      "huria": "HKBP Martoba",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6495000,
+      "prediksi": 6443211,
+      "galat": -51789
+    },
+    {
+      "idHuria": "HK-06-01-04",
+      "huria": "HKBP Martoba",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6402000,
+      "prediksi": 6465592,
+      "galat": 63592
+    },
+    {
+      "idHuria": "HK-06-01-04",
+      "huria": "HKBP Martoba",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6526000,
+      "prediksi": 6447803,
+      "galat": -78197
+    },
+    {
+      "idHuria": "HK-06-01-04",
+      "huria": "HKBP Martoba",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6052000,
+      "prediksi": 6445364,
+      "galat": 393364
+    },
+    {
+      "idHuria": "HK-06-01-04",
+      "huria": "HKBP Martoba",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6621000,
+      "prediksi": 6424884,
+      "galat": -196116
+    },
+    {
+      "idHuria": "HK-06-01-04",
+      "huria": "HKBP Martoba",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6157000,
+      "prediksi": 6318335,
+      "galat": 161335
+    },
+    {
+      "idHuria": "HK-06-01-04",
+      "huria": "HKBP Martoba",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 5939000,
+      "prediksi": 6428782,
+      "galat": 489782
+    },
+    {
+      "idHuria": "HK-06-01-04",
+      "huria": "HKBP Martoba",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 6134000,
+      "prediksi": 6297968,
+      "galat": 163968
+    },
+    {
+      "idHuria": "HK-06-02-01",
+      "huria": "HKBP Tebing Tinggi Kota",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4620000,
+      "prediksi": 4441032,
+      "galat": -178968
+    },
+    {
+      "idHuria": "HK-06-02-01",
+      "huria": "HKBP Tebing Tinggi Kota",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4897000,
+      "prediksi": 4386982,
+      "galat": -510018
+    },
+    {
+      "idHuria": "HK-06-02-01",
+      "huria": "HKBP Tebing Tinggi Kota",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4481000,
+      "prediksi": 4715056,
+      "galat": 234056
+    },
+    {
+      "idHuria": "HK-06-02-01",
+      "huria": "HKBP Tebing Tinggi Kota",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4447000,
+      "prediksi": 4643796,
+      "galat": 196796
+    },
+    {
+      "idHuria": "HK-06-02-01",
+      "huria": "HKBP Tebing Tinggi Kota",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4730000,
+      "prediksi": 4454722,
+      "galat": -275278
+    },
+    {
+      "idHuria": "HK-06-02-01",
+      "huria": "HKBP Tebing Tinggi Kota",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4515000,
+      "prediksi": 4441243,
+      "galat": -73757
+    },
+    {
+      "idHuria": "HK-06-02-01",
+      "huria": "HKBP Tebing Tinggi Kota",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4564000,
+      "prediksi": 4598886,
+      "galat": 34886
+    },
+    {
+      "idHuria": "HK-06-02-01",
+      "huria": "HKBP Tebing Tinggi Kota",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4486000,
+      "prediksi": 4474570,
+      "galat": -11430
+    },
+    {
+      "idHuria": "HK-06-02-02",
+      "huria": "HKBP Rambutan",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 12923000,
+      "prediksi": 13124410,
+      "galat": 201410
+    },
+    {
+      "idHuria": "HK-06-02-02",
+      "huria": "HKBP Rambutan",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 13235000,
+      "prediksi": 13124709,
+      "galat": -110291
+    },
+    {
+      "idHuria": "HK-06-02-02",
+      "huria": "HKBP Rambutan",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 14179000,
+      "prediksi": 13070254,
+      "galat": -1108746
+    },
+    {
+      "idHuria": "HK-06-02-02",
+      "huria": "HKBP Rambutan",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 13557000,
+      "prediksi": 13178762,
+      "galat": -378238
+    },
+    {
+      "idHuria": "HK-06-02-02",
+      "huria": "HKBP Rambutan",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 13580000,
+      "prediksi": 13356800,
+      "galat": -223200
+    },
+    {
+      "idHuria": "HK-06-02-02",
+      "huria": "HKBP Rambutan",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 13784000,
+      "prediksi": 13171330,
+      "galat": -612670
+    },
+    {
+      "idHuria": "HK-06-02-02",
+      "huria": "HKBP Rambutan",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 13838000,
+      "prediksi": 13203095,
+      "galat": -634905
+    },
+    {
+      "idHuria": "HK-06-02-02",
+      "huria": "HKBP Rambutan",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 12578000,
+      "prediksi": 13265155,
+      "galat": 687155
+    },
+    {
+      "idHuria": "HK-06-02-03",
+      "huria": "HKBP Bandar Khalipah",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2880000,
+      "prediksi": 3143372,
+      "galat": 263372
+    },
+    {
+      "idHuria": "HK-06-02-03",
+      "huria": "HKBP Bandar Khalipah",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2847000,
+      "prediksi": 2922085,
+      "galat": 75085
+    },
+    {
+      "idHuria": "HK-06-02-03",
+      "huria": "HKBP Bandar Khalipah",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3144000,
+      "prediksi": 2797510,
+      "galat": -346490
+    },
+    {
+      "idHuria": "HK-06-02-03",
+      "huria": "HKBP Bandar Khalipah",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3166000,
+      "prediksi": 3026693,
+      "galat": -139307
+    },
+    {
+      "idHuria": "HK-06-02-03",
+      "huria": "HKBP Bandar Khalipah",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3175000,
+      "prediksi": 3134735,
+      "galat": -40265
+    },
+    {
+      "idHuria": "HK-06-02-03",
+      "huria": "HKBP Bandar Khalipah",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3164000,
+      "prediksi": 3195538,
+      "galat": 31538
+    },
+    {
+      "idHuria": "HK-06-02-03",
+      "huria": "HKBP Bandar Khalipah",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2921000,
+      "prediksi": 3172677,
+      "galat": 251677
+    },
+    {
+      "idHuria": "HK-06-02-03",
+      "huria": "HKBP Bandar Khalipah",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2948000,
+      "prediksi": 2947609,
+      "galat": -391
+    },
+    {
+      "idHuria": "HK-06-02-04",
+      "huria": "HKBP Paya Pinang",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 11931000,
+      "prediksi": 11740522,
+      "galat": -190478
+    },
+    {
+      "idHuria": "HK-06-02-04",
+      "huria": "HKBP Paya Pinang",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 11636000,
+      "prediksi": 11933693,
+      "galat": 297693
+    },
+    {
+      "idHuria": "HK-06-02-04",
+      "huria": "HKBP Paya Pinang",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 12014000,
+      "prediksi": 11725648,
+      "galat": -288352
+    },
+    {
+      "idHuria": "HK-06-02-04",
+      "huria": "HKBP Paya Pinang",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 11786000,
+      "prediksi": 11833402,
+      "galat": 47402
+    },
+    {
+      "idHuria": "HK-06-02-04",
+      "huria": "HKBP Paya Pinang",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 11496000,
+      "prediksi": 11742301,
+      "galat": 246301
+    },
+    {
+      "idHuria": "HK-06-02-04",
+      "huria": "HKBP Paya Pinang",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 12336000,
+      "prediksi": 11667718,
+      "galat": -668282
+    },
+    {
+      "idHuria": "HK-06-02-04",
+      "huria": "HKBP Paya Pinang",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 11845000,
+      "prediksi": 11898471,
+      "galat": 53471
+    },
+    {
+      "idHuria": "HK-06-02-04",
+      "huria": "HKBP Paya Pinang",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 11910000,
+      "prediksi": 11769899,
+      "galat": -140101
+    },
+    {
+      "idHuria": "HK-06-03-01",
+      "huria": "HKBP Kisaran Kota",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9877000,
+      "prediksi": 9513792,
+      "galat": -363208
+    },
+    {
+      "idHuria": "HK-06-03-01",
+      "huria": "HKBP Kisaran Kota",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9506000,
+      "prediksi": 9648434,
+      "galat": 142434
+    },
+    {
+      "idHuria": "HK-06-03-01",
+      "huria": "HKBP Kisaran Kota",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9801000,
+      "prediksi": 9552614,
+      "galat": -248386
+    },
+    {
+      "idHuria": "HK-06-03-01",
+      "huria": "HKBP Kisaran Kota",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9454000,
+      "prediksi": 9508061,
+      "galat": 54061
+    },
+    {
+      "idHuria": "HK-06-03-01",
+      "huria": "HKBP Kisaran Kota",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9596000,
+      "prediksi": 9525351,
+      "galat": -70649
+    },
+    {
+      "idHuria": "HK-06-03-01",
+      "huria": "HKBP Kisaran Kota",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9322000,
+      "prediksi": 9463297,
+      "galat": 141297
+    },
+    {
+      "idHuria": "HK-06-03-01",
+      "huria": "HKBP Kisaran Kota",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9961000,
+      "prediksi": 9468803,
+      "galat": -492197
+    },
+    {
+      "idHuria": "HK-06-03-01",
+      "huria": "HKBP Kisaran Kota",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9830000,
+      "prediksi": 9489853,
+      "galat": -340147
+    },
+    {
+      "idHuria": "HK-06-03-02",
+      "huria": "HKBP Sei Renggas",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 12183000,
+      "prediksi": 12283732,
+      "galat": 100732
+    },
+    {
+      "idHuria": "HK-06-03-02",
+      "huria": "HKBP Sei Renggas",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 13416000,
+      "prediksi": 12224467,
+      "galat": -1191533
+    },
+    {
+      "idHuria": "HK-06-03-02",
+      "huria": "HKBP Sei Renggas",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 13261000,
+      "prediksi": 12349543,
+      "galat": -911457
+    },
+    {
+      "idHuria": "HK-06-03-02",
+      "huria": "HKBP Sei Renggas",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 12111000,
+      "prediksi": 12866478,
+      "galat": 755478
+    },
+    {
+      "idHuria": "HK-06-03-02",
+      "huria": "HKBP Sei Renggas",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 12853000,
+      "prediksi": 12679659,
+      "galat": -173341
+    },
+    {
+      "idHuria": "HK-06-03-02",
+      "huria": "HKBP Sei Renggas",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 13163000,
+      "prediksi": 12747936,
+      "galat": -415064
+    },
+    {
+      "idHuria": "HK-06-03-02",
+      "huria": "HKBP Sei Renggas",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 12004000,
+      "prediksi": 12871098,
+      "galat": 867098
+    },
+    {
+      "idHuria": "HK-06-03-02",
+      "huria": "HKBP Sei Renggas",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 13033000,
+      "prediksi": 12233552,
+      "galat": -799448
+    },
+    {
+      "idHuria": "HK-06-03-03",
+      "huria": "HKBP Aek Songsongan",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9231000,
+      "prediksi": 9236195,
+      "galat": 5195
+    },
+    {
+      "idHuria": "HK-06-03-03",
+      "huria": "HKBP Aek Songsongan",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9042000,
+      "prediksi": 9318970,
+      "galat": 276970
+    },
+    {
+      "idHuria": "HK-06-03-03",
+      "huria": "HKBP Aek Songsongan",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8706000,
+      "prediksi": 9309040,
+      "galat": 603040
+    },
+    {
+      "idHuria": "HK-06-03-03",
+      "huria": "HKBP Aek Songsongan",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9587000,
+      "prediksi": 8814347,
+      "galat": -772653
+    },
+    {
+      "idHuria": "HK-06-03-03",
+      "huria": "HKBP Aek Songsongan",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9355000,
+      "prediksi": 8828006,
+      "galat": -526994
+    },
+    {
+      "idHuria": "HK-06-03-03",
+      "huria": "HKBP Aek Songsongan",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9435000,
+      "prediksi": 9384492,
+      "galat": -50508
+    },
+    {
+      "idHuria": "HK-06-03-03",
+      "huria": "HKBP Aek Songsongan",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8482000,
+      "prediksi": 9388721,
+      "galat": 906721
+    },
+    {
+      "idHuria": "HK-06-03-03",
+      "huria": "HKBP Aek Songsongan",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9511000,
+      "prediksi": 8762473,
+      "galat": -748527
+    },
+    {
+      "idHuria": "HK-06-03-04",
+      "huria": "HKBP Tanjung Balai",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 5825000,
+      "prediksi": 5748586,
+      "galat": -76414
+    },
+    {
+      "idHuria": "HK-06-03-04",
+      "huria": "HKBP Tanjung Balai",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 5923000,
+      "prediksi": 5784524,
+      "galat": -138476
+    },
+    {
+      "idHuria": "HK-06-03-04",
+      "huria": "HKBP Tanjung Balai",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 5835000,
+      "prediksi": 5845997,
+      "galat": 10997
+    },
+    {
+      "idHuria": "HK-06-03-04",
+      "huria": "HKBP Tanjung Balai",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 5839000,
+      "prediksi": 5717772,
+      "galat": -121228
+    },
+    {
+      "idHuria": "HK-06-03-04",
+      "huria": "HKBP Tanjung Balai",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 5306000,
+      "prediksi": 5595238,
+      "galat": 289238
+    },
+    {
+      "idHuria": "HK-06-03-04",
+      "huria": "HKBP Tanjung Balai",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 5467000,
+      "prediksi": 5451211,
+      "galat": -15789
+    },
+    {
+      "idHuria": "HK-06-03-04",
+      "huria": "HKBP Tanjung Balai",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 5429000,
+      "prediksi": 5408252,
+      "galat": -20748
+    },
+    {
+      "idHuria": "HK-06-03-04",
+      "huria": "HKBP Tanjung Balai",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 5682000,
+      "prediksi": 5430960,
+      "galat": -251040
+    },
+    {
+      "idHuria": "HK-10-01-01",
+      "huria": "HKBP Sei Agul",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 10517000,
+      "prediksi": 10044142,
+      "galat": -472858
+    },
+    {
+      "idHuria": "HK-10-01-01",
+      "huria": "HKBP Sei Agul",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9717000,
+      "prediksi": 10510294,
+      "galat": 793294
+    },
+    {
+      "idHuria": "HK-10-01-01",
+      "huria": "HKBP Sei Agul",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9958000,
+      "prediksi": 10206036,
+      "galat": 248036
+    },
+    {
+      "idHuria": "HK-10-01-01",
+      "huria": "HKBP Sei Agul",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9782000,
+      "prediksi": 9949418,
+      "galat": 167418
+    },
+    {
+      "idHuria": "HK-10-01-01",
+      "huria": "HKBP Sei Agul",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9943000,
+      "prediksi": 9719371,
+      "galat": -223629
+    },
+    {
+      "idHuria": "HK-10-01-01",
+      "huria": "HKBP Sei Agul",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9825000,
+      "prediksi": 9623576,
+      "galat": -201424
+    },
+    {
+      "idHuria": "HK-10-01-01",
+      "huria": "HKBP Sei Agul",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 9640000,
+      "prediksi": 9719172,
+      "galat": 79172
+    },
+    {
+      "idHuria": "HK-10-01-01",
+      "huria": "HKBP Sei Agul",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 10277000,
+      "prediksi": 9605379,
+      "galat": -671621
+    },
+    {
+      "idHuria": "HK-10-01-02",
+      "huria": "HKBP Petisah",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3568000,
+      "prediksi": 3379730,
+      "galat": -188270
+    },
+    {
+      "idHuria": "HK-10-01-02",
+      "huria": "HKBP Petisah",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3549000,
+      "prediksi": 3408027,
+      "galat": -140973
+    },
+    {
+      "idHuria": "HK-10-01-02",
+      "huria": "HKBP Petisah",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3660000,
+      "prediksi": 3426085,
+      "galat": -233915
+    },
+    {
+      "idHuria": "HK-10-01-02",
+      "huria": "HKBP Petisah",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3624000,
+      "prediksi": 3511480,
+      "galat": -112520
+    },
+    {
+      "idHuria": "HK-10-01-02",
+      "huria": "HKBP Petisah",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3725000,
+      "prediksi": 3530640,
+      "galat": -194360
+    },
+    {
+      "idHuria": "HK-10-01-02",
+      "huria": "HKBP Petisah",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3282000,
+      "prediksi": 3564301,
+      "galat": 282301
+    },
+    {
+      "idHuria": "HK-10-01-02",
+      "huria": "HKBP Petisah",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3459000,
+      "prediksi": 3532650,
+      "galat": 73650
+    },
+    {
+      "idHuria": "HK-10-01-02",
+      "huria": "HKBP Petisah",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3444000,
+      "prediksi": 3461607,
+      "galat": 17607
+    },
+    {
+      "idHuria": "HK-10-02-01",
+      "huria": "HKBP Helvetia",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3260000,
+      "prediksi": 3293250,
+      "galat": 33250
+    },
+    {
+      "idHuria": "HK-10-02-01",
+      "huria": "HKBP Helvetia",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3561000,
+      "prediksi": 3369617,
+      "galat": -191383
+    },
+    {
+      "idHuria": "HK-10-02-01",
+      "huria": "HKBP Helvetia",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3190000,
+      "prediksi": 3373124,
+      "galat": 183124
+    },
+    {
+      "idHuria": "HK-10-02-01",
+      "huria": "HKBP Helvetia",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3183000,
+      "prediksi": 3376050,
+      "galat": 193050
+    },
+    {
+      "idHuria": "HK-10-02-01",
+      "huria": "HKBP Helvetia",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3267000,
+      "prediksi": 3269985,
+      "galat": 2985
+    },
+    {
+      "idHuria": "HK-10-02-01",
+      "huria": "HKBP Helvetia",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3192000,
+      "prediksi": 3299355,
+      "galat": 107355
+    },
+    {
+      "idHuria": "HK-10-02-01",
+      "huria": "HKBP Helvetia",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3352000,
+      "prediksi": 3308443,
+      "galat": -43557
+    },
+    {
+      "idHuria": "HK-10-02-01",
+      "huria": "HKBP Helvetia",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3465000,
+      "prediksi": 3270960,
+      "galat": -194040
+    },
+    {
+      "idHuria": "HK-10-02-02",
+      "huria": "HKBP Tembung",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8216000,
+      "prediksi": 8212054,
+      "galat": -3946
+    },
+    {
+      "idHuria": "HK-10-02-02",
+      "huria": "HKBP Tembung",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8779000,
+      "prediksi": 8229584,
+      "galat": -549416
+    },
+    {
+      "idHuria": "HK-10-02-02",
+      "huria": "HKBP Tembung",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8674000,
+      "prediksi": 8364544,
+      "galat": -309456
+    },
+    {
+      "idHuria": "HK-10-02-02",
+      "huria": "HKBP Tembung",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8371000,
+      "prediksi": 8640855,
+      "galat": 269855
+    },
+    {
+      "idHuria": "HK-10-02-02",
+      "huria": "HKBP Tembung",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8983000,
+      "prediksi": 8551909,
+      "galat": -431091
+    },
+    {
+      "idHuria": "HK-10-02-02",
+      "huria": "HKBP Tembung",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8429000,
+      "prediksi": 8612010,
+      "galat": 183010
+    },
+    {
+      "idHuria": "HK-10-02-02",
+      "huria": "HKBP Tembung",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8143000,
+      "prediksi": 8588665,
+      "galat": 445665
+    },
+    {
+      "idHuria": "HK-10-02-02",
+      "huria": "HKBP Tembung",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 8877000,
+      "prediksi": 8345499,
+      "galat": -531501
+    },
+    {
+      "idHuria": "HUR-04.01.01",
+      "huria": "Ulubius",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2734000,
+      "prediksi": 2744040,
+      "galat": 10040
+    },
+    {
+      "idHuria": "HUR-04.01.01",
+      "huria": "Ulubius",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2700000,
+      "prediksi": 2744040,
+      "galat": 44040
+    },
+    {
+      "idHuria": "HUR-04.01.01",
+      "huria": "Ulubius",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2647000,
+      "prediksi": 2741356,
+      "galat": 94356
+    },
+    {
+      "idHuria": "HUR-04.01.01",
+      "huria": "Ulubius",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2748000,
+      "prediksi": 2744040,
+      "galat": -3960
+    },
+    {
+      "idHuria": "HUR-04.01.01",
+      "huria": "Ulubius",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2762000,
+      "prediksi": 2730857,
+      "galat": -31143
+    },
+    {
+      "idHuria": "HUR-04.01.01",
+      "huria": "Ulubius",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2769000,
+      "prediksi": 2744040,
+      "galat": -24960
+    },
+    {
+      "idHuria": "HUR-04.01.01",
+      "huria": "Ulubius",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2839000,
+      "prediksi": 2733299,
+      "galat": -105701
+    },
+    {
+      "idHuria": "HUR-04.01.01",
+      "huria": "Ulubius",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2783000,
+      "prediksi": 2754539,
+      "galat": -28461
+    },
+    {
+      "idHuria": "HUR-04.01.02",
+      "huria": "Huria Porsea",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3062000,
+      "prediksi": 3210171,
+      "galat": 148171
+    },
+    {
+      "idHuria": "HUR-04.01.02",
+      "huria": "Huria Porsea",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3034000,
+      "prediksi": 3252464,
+      "galat": 218464
+    },
+    {
+      "idHuria": "HUR-04.01.02",
+      "huria": "Huria Porsea",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3406000,
+      "prediksi": 3122256,
+      "galat": -283744
+    },
+    {
+      "idHuria": "HUR-04.01.02",
+      "huria": "Huria Porsea",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3370000,
+      "prediksi": 3210458,
+      "galat": -159542
+    },
+    {
+      "idHuria": "HUR-04.01.02",
+      "huria": "Huria Porsea",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3216000,
+      "prediksi": 3330008,
+      "galat": 114008
+    },
+    {
+      "idHuria": "HUR-04.01.02",
+      "huria": "Huria Porsea",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3438000,
+      "prediksi": 3332564,
+      "galat": -105436
+    },
+    {
+      "idHuria": "HUR-04.01.02",
+      "huria": "Huria Porsea",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3401000,
+      "prediksi": 3322722,
+      "galat": -78278
+    },
+    {
+      "idHuria": "HUR-04.01.02",
+      "huria": "Huria Porsea",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3268000,
+      "prediksi": 3371734,
+      "galat": 103734
+    },
+    {
+      "idHuria": "HUR-04.02.01",
+      "huria": "Tanding",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2062000,
+      "prediksi": 2162817,
+      "galat": 100817
+    },
+    {
+      "idHuria": "HUR-04.02.01",
+      "huria": "Tanding",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2234000,
+      "prediksi": 2154660,
+      "galat": -79340
+    },
+    {
+      "idHuria": "HUR-04.02.01",
+      "huria": "Tanding",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2241000,
+      "prediksi": 2155252,
+      "galat": -85748
+    },
+    {
+      "idHuria": "HUR-04.02.01",
+      "huria": "Tanding",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2085000,
+      "prediksi": 2176772,
+      "galat": 91772
+    },
+    {
+      "idHuria": "HUR-04.02.01",
+      "huria": "Tanding",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2095000,
+      "prediksi": 2159851,
+      "galat": 64851
+    },
+    {
+      "idHuria": "HUR-04.02.01",
+      "huria": "Tanding",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2158000,
+      "prediksi": 2152944,
+      "galat": -5056
+    },
+    {
+      "idHuria": "HUR-04.02.01",
+      "huria": "Tanding",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2256000,
+      "prediksi": 2150981,
+      "galat": -105019
+    },
+    {
+      "idHuria": "HUR-04.02.01",
+      "huria": "Tanding",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2051000,
+      "prediksi": 2157888,
+      "galat": 106888
+    },
+    {
+      "idHuria": "HUR-04.02.02",
+      "huria": "Nauli",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2459000,
+      "prediksi": 2323079,
+      "galat": -135921
+    },
+    {
+      "idHuria": "HUR-04.02.02",
+      "huria": "Nauli",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2322000,
+      "prediksi": 2321726,
+      "galat": -274
+    },
+    {
+      "idHuria": "HUR-04.02.02",
+      "huria": "Nauli",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2352000,
+      "prediksi": 2308872,
+      "galat": -43128
+    },
+    {
+      "idHuria": "HUR-04.02.02",
+      "huria": "Nauli",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2349000,
+      "prediksi": 2321747,
+      "galat": -27253
+    },
+    {
+      "idHuria": "HUR-04.02.02",
+      "huria": "Nauli",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2211000,
+      "prediksi": 2316187,
+      "galat": 105187
+    },
+    {
+      "idHuria": "HUR-04.02.02",
+      "huria": "Nauli",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2215000,
+      "prediksi": 2281072,
+      "galat": 66072
+    },
+    {
+      "idHuria": "HUR-04.02.02",
+      "huria": "Nauli",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2217000,
+      "prediksi": 2271622,
+      "galat": 54622
+    },
+    {
+      "idHuria": "HUR-04.02.02",
+      "huria": "Nauli",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 2231000,
+      "prediksi": 2213107,
+      "galat": -17893
+    },
+    {
+      "idHuria": "HUR-04.03.01",
+      "huria": "Laguboti",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3844000,
+      "prediksi": 3625635,
+      "galat": -218365
+    },
+    {
+      "idHuria": "HUR-04.03.01",
+      "huria": "Laguboti",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3666000,
+      "prediksi": 3788920,
+      "galat": 122920
+    },
+    {
+      "idHuria": "HUR-04.03.01",
+      "huria": "Laguboti",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3909000,
+      "prediksi": 3712147,
+      "galat": -196853
+    },
+    {
+      "idHuria": "HUR-04.03.01",
+      "huria": "Laguboti",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3893000,
+      "prediksi": 3769715,
+      "galat": -123285
+    },
+    {
+      "idHuria": "HUR-04.03.01",
+      "huria": "Laguboti",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3811000,
+      "prediksi": 3872532,
+      "galat": 61532
+    },
+    {
+      "idHuria": "HUR-04.03.01",
+      "huria": "Laguboti",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3624000,
+      "prediksi": 3867067,
+      "galat": 243067
+    },
+    {
+      "idHuria": "HUR-04.03.01",
+      "huria": "Laguboti",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3896000,
+      "prediksi": 3738903,
+      "galat": -157097
+    },
+    {
+      "idHuria": "HUR-04.03.01",
+      "huria": "Laguboti",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3789000,
+      "prediksi": 3742302,
+      "galat": -46698
+    },
+    {
+      "idHuria": "HUR-04.03.02",
+      "huria": "Aruan",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4102000,
+      "prediksi": 4059289,
+      "galat": -42711
+    },
+    {
+      "idHuria": "HUR-04.03.02",
+      "huria": "Aruan",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4364000,
+      "prediksi": 3942586,
+      "galat": -421414
+    },
+    {
+      "idHuria": "HUR-04.03.02",
+      "huria": "Aruan",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3876000,
+      "prediksi": 4170074,
+      "galat": 294074
+    },
+    {
+      "idHuria": "HUR-04.03.02",
+      "huria": "Aruan",
+      "tanggal": "2026-09-13",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4178000,
+      "prediksi": 4110351,
+      "galat": -67649
+    },
+    {
+      "idHuria": "HUR-04.03.02",
+      "huria": "Aruan",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 3852000,
+      "prediksi": 4057956,
+      "galat": 205956
+    },
+    {
+      "idHuria": "HUR-04.03.02",
+      "huria": "Aruan",
+      "tanggal": "2026-09-27",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4193000,
+      "prediksi": 4081160,
+      "galat": -111840
+    },
+    {
+      "idHuria": "HUR-04.03.02",
+      "huria": "Aruan",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4208000,
+      "prediksi": 3943653,
+      "galat": -264347
+    },
+    {
+      "idHuria": "HUR-04.03.02",
+      "huria": "Aruan",
+      "tanggal": "2026-10-11",
+      "sesi": "Ibadah Minggu",
+      "aktual": 4059000,
+      "prediksi": 4190748,
+      "galat": 131748
+    }
+  ],
+  "analisisKesalahan": [
+    {
+      "huria": "HKBP Balige Kota",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 11889000,
+      "prediksi": 10595719,
+      "galat": -1293281,
+      "galatPersen": 10.88,
+      "dugaanPenyebab": "Variasi kehadiran jemaat yang tidak terekam fitur historis"
+    },
+    {
+      "huria": "HKBP Sei Renggas",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 13416000,
+      "prediksi": 12224467,
+      "galat": -1191533,
+      "galatPersen": 8.88,
+      "dugaanPenyebab": "Variasi kehadiran jemaat yang tidak terekam fitur historis"
+    },
+    {
+      "huria": "HKBP Sutomo Siantar",
+      "tanggal": "2026-08-30",
+      "sesi": "Ibadah Minggu",
+      "aktual": 13457000,
+      "prediksi": 12302742,
+      "galat": -1154258,
+      "galatPersen": 8.58,
+      "dugaanPenyebab": "Variasi kehadiran jemaat yang tidak terekam fitur historis"
+    },
+    {
+      "huria": "HKBP Doloksanggul Kota",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 16131000,
+      "prediksi": 14988602,
+      "galat": -1142398,
+      "galatPersen": 7.08,
+      "dugaanPenyebab": "Variasi kehadiran jemaat yang tidak terekam fitur historis"
+    },
+    {
+      "huria": "HKBP Rambutan",
+      "tanggal": "2026-09-06",
+      "sesi": "Ibadah Minggu",
+      "aktual": 14179000,
+      "prediksi": 13070254,
+      "galat": -1108746,
+      "galatPersen": 7.82,
+      "dugaanPenyebab": "Variasi kehadiran jemaat yang tidak terekam fitur historis"
+    },
+    {
+      "huria": "HKBP Doloksanggul Kota",
+      "tanggal": "2026-09-20",
+      "sesi": "Ibadah Minggu",
+      "aktual": 16422000,
+      "prediksi": 15332178,
+      "galat": -1089822,
+      "galatPersen": 6.64,
+      "dugaanPenyebab": "Variasi kehadiran jemaat yang tidak terekam fitur historis"
+    },
+    {
+      "huria": "HKBP Sosor Ladang",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Minggu",
+      "aktual": 15184000,
+      "prediksi": 14140137,
+      "galat": -1043863,
+      "galatPersen": 6.87,
+      "dugaanPenyebab": "Variasi kehadiran jemaat yang tidak terekam fitur historis"
+    },
+    {
+      "huria": "HKBP Medan Kota",
+      "tanggal": "2026-10-04",
+      "sesi": "Ibadah Siang (Bahasa Indonesia/Batak)",
+      "aktual": 14124000,
+      "prediksi": 13085246,
+      "galat": -1038754,
+      "galatPersen": 7.35,
+      "dugaanPenyebab": "Variasi kehadiran jemaat yang tidak terekam fitur historis"
+    },
+    {
+      "huria": "HKBP Sosor Ladang",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 15290000,
+      "prediksi": 14267113,
+      "galat": -1022887,
+      "galatPersen": 6.69,
+      "dugaanPenyebab": "Variasi kehadiran jemaat yang tidak terekam fitur historis"
+    },
+    {
+      "huria": "HKBP Parbubu",
+      "tanggal": "2026-08-23",
+      "sesi": "Ibadah Minggu",
+      "aktual": 12700000,
+      "prediksi": 11693105,
+      "galat": -1006895,
+      "galatPersen": 7.93,
+      "dugaanPenyebab": "Variasi kehadiran jemaat yang tidak terekam fitur historis"
+    }
+  ],
+  "metrikHariRaya": {
+    "mae": 379900.4,
+    "rmse": 577225.27,
+    "mape": 3.0114,
+    "r2": 0.993289
+  },
+  "catatan": [
+    "Data bersumber dari data warehouse hasil ETL (seed/simulasi pola keuangan HKBP).",
+    "Hubungan kehadiran-pelean pada data sangat linear sehingga baseline sudah kuat; model non-linear tidak selalu lebih baik - ini ditunjukkan apa adanya."
+  ]
+}
